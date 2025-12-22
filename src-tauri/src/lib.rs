@@ -260,13 +260,6 @@ async fn start_recording(
         .spawn()
         .map_err(|e| e.to_string())?;
 
-    // 播放提示音
-    thread::spawn(|| {
-        let _ = Command::new("afplay")
-            .arg("/System/Library/Sounds/Tink.aiff")
-            .output();
-    });
-
     let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {
         let mut is_ready = false;
@@ -275,6 +268,13 @@ async fn start_recording(
                 let msg = String::from_utf8_lossy(&line);
                 if msg.contains("size=") && !is_ready {
                     is_ready = true;
+
+                    thread::spawn(|| {
+                        let _ = Command::new("afplay")
+                            .arg("/System/Library/Sounds/Tink.aiff")
+                            .output();
+                    });
+
                     println!("[FFmpeg] Recording started successfully");
                     let _ = app_clone.emit("recording-ready", "ready");
                 }
@@ -367,11 +367,24 @@ async fn stop_and_transcribe(
 
     let result_text = String::from_utf8_lossy(&whisper_output.stdout).trim().to_string();
     
-    if result_text.is_empty() {
+    if !result_text.is_empty() {
+        // 成功音效
+        thread::spawn(|| {
+            let _ = Command::new("afplay")
+                .arg("/System/Library/Sounds/Glass.aiff")
+                .output();
+        });
+        Ok(result_text)
+    } else {
+        // 失敗或無內容音效（可選）
+        thread::spawn(|| {
+            let _ = Command::new("afplay")
+                .arg("/System/Library/Sounds/Basso.aiff")
+                .output();
+        });
+
         let err = String::from_utf8_lossy(&whisper_output.stderr);
         Ok(format!("(無內容) Debug: {}", err))
-    } else {
-        Ok(result_text)
     }
 }
 
