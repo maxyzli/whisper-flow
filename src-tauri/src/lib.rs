@@ -551,6 +551,92 @@ fn open_recordings_dir(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn transcribe_external_file(
+    app: AppHandle,
+    file_path: String,
+    model_type: String,
+) -> Result<String, String> {
+    println!("--- [Debug] Processing external file: {} ---", file_path);
+
+    // 1. 建立一個新的 Session 資料夾 (借用現有的 helper)
+    let (_, _, _, wav_path, transcript_path) = new_session_paths(&app)?;
+
+    // 2. 使用 FFmpeg 將任意輸入檔 (MP4, MP3, MOV...) 轉為 16kHz WAV
+    // 參數解釋：
+    // -i file_path: 輸入檔
+    // -vn: 去除視訊 (Video None)
+    // -ar 16000: 採樣率 16k (Whisper 要求)
+    // -ac 1: 單聲道 (Whisper 要求)
+    println!("Converting to WAV...");
+    let convert_result = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| e.to_string())?
+        .args([
+            "-y",
+            "-i",
+            &file_path,
+            "-vn",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            wav_path.to_str().ok_or_else(|| "Invalid wav path".to_string())?,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("FFmpeg execution failed: {}", e))?;
+
+    if !convert_result.status.success() {
+        let stderr = String::from_utf8_lossy(&convert_result.stderr);
+        return Err(format!("FFmpeg conversion failed: {}", stderr));
+    }
+
+    // 3. 執行 Whisper (邏輯與 stop_and_transcribe 相同)
+    println!("Running Whisper on converted file...");
+    let (model_path, _) = get_model_info(&app, &model_type)?;
+
+    let whisper_output = app
+        .shell()
+        .sidecar("whisper-cli")
+        .map_err(|e| e.to_string())?
+        .args([
+            "-m",
+            model_path.to_str().ok_or_else(|| "Invalid model path".to_string())?,
+            "-f",
+            wav_path.to_str().ok_or_else(|| "Invalid wav path".to_string())?,
+            "-t", "8",      // Threads
+            "-l", "zh",     // Language
+            "-nt",          // No timestamps (只輸出純文字)
+            "--prompt", "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿", 
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Whisper failed: {}", e))?;
+
+    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout).trim().to_string();
+    let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
+
+    // 4. 存檔與回傳
+    let transcript_body = if !transcript_text.is_empty() {
+        transcript_text.clone()
+    } else {
+        format!("(empty)\n\nstderr:\n{}", whisper_stderr)
+    };
+
+    tokio::fs::write(&transcript_path, transcript_body)
+        .await
+        .map_err(|e| format!("Failed to write transcript: {}", e))?;
+
+    // 成功音效
+    thread::spawn(|| {
+        let _ = Command::new("afplay").arg("/System/Library/Sounds/Glass.aiff").output();
+    });
+
+    Ok(transcript_text)
+}
+
 // -----------------------------
 // Entry point
 // -----------------------------
@@ -569,6 +655,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             session: Mutex::new(None),
         })
@@ -581,7 +668,8 @@ pub fn run() {
             check_accessibility_permission,
             update_global_shortcut,
             get_recordings_dir_cmd,
-            open_recordings_dir
+            open_recordings_dir,
+            transcribe_external_file
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

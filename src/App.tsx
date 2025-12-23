@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { open } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
 // --- 設定常數 ---
@@ -40,6 +41,7 @@ function App() {
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false); // 正在錄製快捷鍵
+  const [isDragging, setIsDragging] = useState(false); // 新增：拖拽狀態
 
   // 運作流程狀態
   const [isStarting, setIsStarting] = useState(false); // FFmpeg 啟動中
@@ -52,7 +54,7 @@ function App() {
   const [transcription, setTranscription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // 新增：recordings folder path
+  // recordings folder path
   const [recordingsDir, setRecordingsDir] = useState<string>("");
 
   // Refs (用於解決 Event Listener 閉包陷阱)
@@ -95,6 +97,11 @@ function App() {
     let unlistenShortcut: (() => void) | undefined;
     let unlistenDownload: (() => void) | undefined;
     let unlistenReady: (() => void) | undefined;
+    
+    // Drag events
+    let unlistenDragEnter: (() => void) | undefined;
+    let unlistenDragLeave: (() => void) | undefined;
+    let unlistenDragDrop: (() => void) | undefined;
 
     const init = async () => {
       // 檢查權限
@@ -104,7 +111,7 @@ function App() {
       // 註冊初始快捷鍵
       updateRustShortcut(shortcutKey);
 
-      // 新增：取得 recordings parent dir
+      // 取得 recordings parent dir
       try {
         const dir = await invoke<string>("get_recordings_dir_cmd");
         setRecordingsDir(dir);
@@ -131,6 +138,23 @@ function App() {
         setIsRecording(true);
         recordStartTime.current = Date.now();
       });
+
+      // --- Drag & Drop Listeners ---
+      unlistenDragEnter = await listen("tauri://drag-enter", () => {
+        setIsDragging(true);
+      });
+
+      unlistenDragLeave = await listen("tauri://drag-leave", () => {
+        setIsDragging(false);
+      });
+
+      unlistenDragDrop = await listen<{ paths: string[] }>("tauri://drag-drop", (event) => {
+        setIsDragging(false);
+        const files = event.payload.paths;
+        if (files && files.length > 0) {
+          handleFileProcess(files[0]);
+        }
+      });
     };
 
     init();
@@ -139,9 +163,12 @@ function App() {
       if (unlistenShortcut) unlistenShortcut();
       if (unlistenDownload) unlistenDownload();
       if (unlistenReady) unlistenReady();
+      if (unlistenDragEnter) unlistenDragEnter();
+      if (unlistenDragLeave) unlistenDragLeave();
+      if (unlistenDragDrop) unlistenDragDrop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 只執行一次
+  }, []);
 
   // 當模型改變時，檢查該模型是否存在
   useEffect(() => {
@@ -151,7 +178,7 @@ function App() {
 
   // --- 3. 核心功能邏輯 ---
 
-  // 快捷鍵錄製邏輯 (修復版：監聽 Window)
+  // 快捷鍵錄製邏輯
   useEffect(() => {
     if (!isRecordingShortcut) return;
 
@@ -159,14 +186,14 @@ function App() {
       e.preventDefault();
       e.stopPropagation();
 
-      // 忽略單獨按下修飾鍵
-      if (["Control", "Shift", "Alt", "Meta", "Command"].includes(e.key)) return;
+      if (["Control", "Shift", "Alt", "Meta", "Command"].includes(e.key))
+        return;
 
       const modifiers: string[] = [];
       if (e.ctrlKey) modifiers.push("Ctrl");
       if (e.shiftKey) modifiers.push("Shift");
       if (e.altKey) modifiers.push("Alt");
-      if (e.metaKey) modifiers.push("Super"); // Rust 端通常識別 Super 為 Command
+      if (e.metaKey) modifiers.push("Super");
 
       let key = e.key.toUpperCase();
       if (key === " ") key = "Space";
@@ -191,10 +218,10 @@ function App() {
     }
   };
 
+  // 錄音 Toggle 邏輯
   const handleToggleLogic = async () => {
     const current = stateRef.current;
 
-    // 忙碌狀態防護
     if (current.isLoading || current.downloading || current.isStarting) return;
 
     if (!current.isRecording) {
@@ -216,7 +243,6 @@ function App() {
         return;
       }
 
-      // UI 立即響應停止，進入 Loading
       setIsRecording(false);
       setIsLoading(true);
 
@@ -236,6 +262,64 @@ function App() {
     }
   };
 
+  // --- 共用：處理單一檔案轉錄 (用於 Dialog 與 Drop) ---
+  const handleFileProcess = async (filePath: string) => {
+    // 檢查系統狀態
+    const current = stateRef.current;
+    if (current.isRecording || current.isStarting || current.isLoading) {
+      setError("系統忙碌中，請稍後再試");
+      return;
+    }
+
+    // 簡單副檔名檢查 (Optional)
+    const validExts = ["mp4", "mp3", "m4a", "wav", "mov", "mkv"];
+    const ext = filePath.split(".").pop()?.toLowerCase();
+    if (!ext || !validExts.includes(ext)) {
+      setError("不支援的檔案格式");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setTranscription("");
+    console.log("Processing file:", filePath);
+
+    try {
+      // Invoke Rust command
+      const result = await invoke<string>("transcribe_external_file", {
+        filePath: filePath,
+        modelType: current.selectedModel,
+      });
+
+      setTranscription(result);
+      await writeText(result); // Auto copy
+    } catch (err) {
+      setError(`檔案處理失敗: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- 處理檔案匯入 (按鈕觸發) ---
+  const handleImportFile = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: "Media",
+            extensions: ["mp4", "mp3", "m4a", "wav", "mov", "mkv"],
+          },
+        ],
+      });
+
+      if (selected === null) return; // User cancelled
+      handleFileProcess(selected as string);
+    } catch (err) {
+      setError(`開啟檔案失敗: ${err}`);
+    }
+  };
+
   // --- 4. 輔助功能 ---
   const checkPermissions = async () => {
     try {
@@ -251,7 +335,6 @@ function App() {
     try {
       const list = await invoke<AudioDevice[]>("get_audio_devices");
       setDevices(list);
-      // 確保選中的設備還在列表內
       if (list.length > 0 && !list.find((d) => d.id === selectedDevice)) {
         setSelectedDevice(list[0].id);
       }
@@ -289,7 +372,6 @@ function App() {
     alert("請至「系統設定 -> 隱私權與安全性 -> 輔助使用」開啟權限。");
   };
 
-  // 新增：打開 recordings folder
   const openRecordingsFolder = async () => {
     try {
       await invoke("open_recordings_dir");
@@ -313,7 +395,8 @@ function App() {
       </div>
     );
 
-  if (!modelStatus) return <div className="loading-screen">初始化系統中...</div>;
+  if (!modelStatus)
+    return <div className="loading-screen">初始化系統中...</div>;
 
   return (
     <main className="container">
@@ -363,10 +446,10 @@ function App() {
           </div>
         </div>
 
-        {/* 模型下載提示 */}
-        {!modelStatus.exists && (
-          <div className="download-area">
-            {downloading ? (
+        {/* 模型下載與檔案匯入 */}
+        <div className="action-row" style={{ marginTop: "12px" }}>
+          {!modelStatus.exists ? (
+            downloading ? (
               <div className="progress-bar">
                 <div
                   className="fill"
@@ -374,14 +457,25 @@ function App() {
                 ></div>
               </div>
             ) : (
-              <button className="btn-primary" onClick={handleDownload}>
+              <button
+                className="btn-primary full-width"
+                onClick={handleDownload}
+              >
                 下載模型 ({selectedModel})
               </button>
-            )}
-          </div>
-        )}
+            )
+          ) : (
+            <button
+              className="btn-secondary full-width"
+              onClick={handleImportFile}
+              disabled={isRecording || isStarting || isLoading}
+            >
+              📂 匯入 影片/音訊 轉文字
+            </button>
+          )}
+        </div>
 
-        {/* 新增：Recordings Folder */}
+        {/* Recordings Folder Info */}
         <div className="folder-row">
           <div className="folder-meta">
             <div className="folder-label">Recordings Folder</div>
@@ -411,7 +505,7 @@ function App() {
         </div>
       </section>
 
-      {/* 錄音控制區 */}
+      {/* 錄音控制區 (僅在模型存在時顯示) */}
       {modelStatus.exists && (
         <section className="card control-card">
           <div className="device-select-row">
@@ -427,7 +521,11 @@ function App() {
                 </option>
               ))}
             </select>
-            <button className="icon-btn" onClick={fetchDevices} title="重新整理設備">
+            <button
+              className="icon-btn"
+              onClick={fetchDevices}
+              title="重新整理設備"
+            >
               ↻
             </button>
           </div>
@@ -465,7 +563,7 @@ function App() {
           className="transcript-box"
           value={transcription}
           readOnly
-          placeholder="等待錄音..."
+          placeholder="等待錄音 或 拖入檔案..."
         />
       </section>
 
@@ -475,6 +573,16 @@ function App() {
       {isRecordingShortcut && (
         <div className="overlay" onClick={() => setIsRecordingShortcut(false)}>
           <div className="overlay-msg">請按下新的組合鍵...</div>
+        </div>
+      )}
+
+      {/* 拖拽檔案時的遮罩 */}
+      {isDragging && (
+        <div className="drag-overlay">
+          <div className="drag-content">
+            <div className="drag-icon">📂</div>
+            <div className="drag-text">釋放以匯入檔案</div>
+          </div>
         </div>
       )}
     </main>
