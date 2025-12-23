@@ -1,5 +1,5 @@
 /* =========================================================
-   Whisper Flow UI - Final (Import + Drag & Drop)
+   Whisper Flow UI - Final (With Language Selection)
    ========================================================= */
 
 /* -----------------------------
@@ -51,7 +51,7 @@ body {
 ------------------------------ */
 .container {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px; /*稍微加寬一點點，讓三個選項更舒適 */
 
   height: 100vh; /* lock to viewport height */
   box-sizing: border-box;
@@ -129,38 +129,48 @@ header h1 {
 }
 
 /* -----------------------------
-   5) Settings grid + inputs
+   5) Settings grid + inputs (重點修改區)
 ------------------------------ */
 .grid-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr; /* 改回 1fr 1fr (兩欄) */
   gap: 12px;
+  align-items: end;
+}
+
+/* 如果螢幕真的太窄，強迫換行 */
+@media (max-width: 380px) {
+  .grid-row {
+    grid-template-columns: 1fr; /* 變成單欄 */
+  }
 }
 
 .input-group label {
   display: block;
   margin-bottom: 6px;
 
-  font-size: 0.75rem;
+  font-size: 0.7rem; /* 稍微縮小字體 */
   font-weight: 500;
   color: var(--text-sub);
+  white-space: nowrap; /* 防止文字換行 */
 }
 
 /* Select */
 .modern-select {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 8px; /* 縮小左右 padding */
 
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
 
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.85rem; /* 字體微調 */
 
   outline: none;
   appearance: none;
   cursor: pointer;
+  text-overflow: ellipsis; /* 文字過長顯示 ... */
 }
 
 .modern-select:focus {
@@ -177,7 +187,7 @@ header h1 {
 /* Shortcut button */
 .shortcut-btn {
   width: 100%;
-  padding: 8px;
+  padding: 8px 4px; /* 縮小 Padding */
 
   background: var(--input-bg);
   border: 1px solid var(--border-color);
@@ -185,10 +195,16 @@ header h1 {
 
   color: var(--primary);
   font-family: "SF Mono", monospace;
-  font-size: 0.85rem;
+  font-size: 0.8rem; /* 字體微調，避免被切掉 */
+  font-weight: 600;
 
   cursor: pointer;
   transition: all 0.2s;
+  
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 .shortcut-btn:hover {
@@ -346,7 +362,7 @@ header h1 {
 
 .transcript-box {
   flex: 1;
-  min-height: 0; /* avoid forcing min height */
+  min-height: 200px; /* avoid forcing min height */
   overflow: auto; /* scroll inside textarea */
 
   background: var(--input-bg);

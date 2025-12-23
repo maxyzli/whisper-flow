@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "Whisper Flow",
-        "width": 400,
-        "height": 600,
+        "width": 460,
+        "height": 800,
         "resizable": true
       }
     ],

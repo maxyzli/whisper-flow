@@ -13,6 +13,12 @@ const MODEL_OPTIONS = [
   { id: "medium", label: "Medium (最強)", desc: "適合長語音" },
 ];
 
+const LANGUAGE_OPTIONS = [
+  { id: "auto", label: "Auto (自動判定)" },
+  { id: "zh", label: "Chinese (中文)" },
+  { id: "en", label: "English (英文)" },
+];
+
 interface ModelStatus {
   exists: boolean;
   path: string;
@@ -29,6 +35,10 @@ function App() {
   // 持久化設定
   const [selectedModel, setSelectedModel] = useState(
     () => localStorage.getItem("wf_model") || "small"
+  );
+  // 新增：語言狀態
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    () => localStorage.getItem("wf_language") || "zh"
   );
   const [selectedDevice, setSelectedDevice] = useState(
     () => localStorage.getItem("wf_device") || "0"
@@ -66,6 +76,7 @@ function App() {
     downloading,
     selectedDevice,
     selectedModel,
+    selectedLanguage,
   });
 
   // --- 1. 狀態同步 (Ref Pattern) ---
@@ -77,9 +88,11 @@ function App() {
       downloading,
       selectedDevice,
       selectedModel,
+      selectedLanguage,
     };
     // 同步儲存到 LocalStorage
     localStorage.setItem("wf_model", selectedModel);
+    localStorage.setItem("wf_language", selectedLanguage);
     localStorage.setItem("wf_device", selectedDevice);
     localStorage.setItem("wf_shortcut", shortcutKey);
   }, [
@@ -89,6 +102,7 @@ function App() {
     downloading,
     selectedDevice,
     selectedModel,
+    selectedLanguage,
     shortcutKey,
   ]);
 
@@ -249,6 +263,7 @@ function App() {
       try {
         const result = await invoke<string>("stop_and_transcribe", {
           modelType: current.selectedModel,
+          language: current.selectedLanguage, // 傳入當前語言設定
         });
         setTranscription(result);
         await writeText(result); // 自動複製
@@ -289,6 +304,7 @@ function App() {
       const result = await invoke<string>("transcribe_external_file", {
         filePath: filePath,
         modelType: current.selectedModel,
+        language: current.selectedLanguage, // 傳入當前語言設定
       });
 
       setTranscription(result);
@@ -415,6 +431,7 @@ function App() {
 
       {/* 設定區塊 */}
       <section className="card settings-card">
+        {/* 第一排：AI 模型 & 語言 (左右平分) */}
         <div className="grid-row">
           <div className="input-group">
             <label>AI 模型</label>
@@ -433,17 +450,34 @@ function App() {
           </div>
 
           <div className="input-group">
-            <label>快捷鍵</label>
-            <button
-              className={`shortcut-btn ${isRecordingShortcut ? "active" : ""}`}
-              onClick={() => setIsRecordingShortcut(true)}
-              disabled={isRecording || isStarting}
+            <label>辨識語言</label>
+            <select
+              className="modern-select"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              disabled={isRecording || isStarting || isLoading}
             >
-              {isRecordingShortcut
-                ? "按下按鍵..."
-                : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
-            </button>
+              {LANGUAGE_OPTIONS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
+
+        {/* 第二排：快捷鍵 (獨立一行，寬度全滿) */}
+        <div className="input-group" style={{ marginTop: "12px" }}>
+          <label>快捷鍵</label>
+          <button
+            className={`shortcut-btn ${isRecordingShortcut ? "active" : ""}`}
+            onClick={() => setIsRecordingShortcut(true)}
+            disabled={isRecording || isStarting}
+          >
+            {isRecordingShortcut
+              ? "按下按鍵..."
+              : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
+          </button>
         </div>
 
         {/* 模型下載與檔案匯入 */}

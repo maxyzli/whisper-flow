@@ -380,8 +380,9 @@ async fn stop_and_transcribe(
     app: AppHandle,
     state: State<'_, AppState>,
     model_type: String,
+    language: String, // <--- 接收前端傳來的語言設定 (e.g., "auto", "zh", "en")
 ) -> Result<String, String> {
-    println!("--- [Debug] Stop requested ---");
+    println!("--- [Debug] Stop requested (Lang: {}) ---", language);
 
     // Take session atomically (releases the lock quickly)
     let session = {
@@ -472,7 +473,7 @@ async fn stop_and_transcribe(
             "-t",
             "8",
             "-l",
-            "zh",
+            &language, // <--- 使用傳入的語言參數
             "-nt",
             "--prompt",
             "API, Python, SDE, Amazon, 繁體中文, 技術討論, Rust, React, debug",
@@ -481,7 +482,9 @@ async fn stop_and_transcribe(
         .await
         .map_err(|e| format!("Whisper failed: {}", e))?;
 
-    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout).trim().to_string();
+    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout)
+        .trim()
+        .to_string();
     let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
 
     // Persist transcript.txt (always write something for traceability)
@@ -556,18 +559,17 @@ async fn transcribe_external_file(
     app: AppHandle,
     file_path: String,
     model_type: String,
+    language: String, // <--- 接收前端傳來的語言設定
 ) -> Result<String, String> {
-    println!("--- [Debug] Processing external file: {} ---", file_path);
+    println!(
+        "--- [Debug] Processing external file: {} (Lang: {}) ---",
+        file_path, language
+    );
 
     // 1. 建立一個新的 Session 資料夾 (借用現有的 helper)
     let (_, _, _, wav_path, transcript_path) = new_session_paths(&app)?;
 
     // 2. 使用 FFmpeg 將任意輸入檔 (MP4, MP3, MOV...) 轉為 16kHz WAV
-    // 參數解釋：
-    // -i file_path: 輸入檔
-    // -vn: 去除視訊 (Video None)
-    // -ar 16000: 採樣率 16k (Whisper 要求)
-    // -ac 1: 單聲道 (Whisper 要求)
     println!("Converting to WAV...");
     let convert_result = app
         .shell()
@@ -582,7 +584,9 @@ async fn transcribe_external_file(
             "16000",
             "-ac",
             "1",
-            wav_path.to_str().ok_or_else(|| "Invalid wav path".to_string())?,
+            wav_path
+                .to_str()
+                .ok_or_else(|| "Invalid wav path".to_string())?,
         ])
         .output()
         .await
@@ -603,19 +607,28 @@ async fn transcribe_external_file(
         .map_err(|e| e.to_string())?
         .args([
             "-m",
-            model_path.to_str().ok_or_else(|| "Invalid model path".to_string())?,
+            model_path
+                .to_str()
+                .ok_or_else(|| "Invalid model path".to_string())?,
             "-f",
-            wav_path.to_str().ok_or_else(|| "Invalid wav path".to_string())?,
-            "-t", "8",      // Threads
-            "-l", "zh",     // Language
-            "-nt",          // No timestamps (只輸出純文字)
-            "--prompt", "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿", 
+            wav_path
+                .to_str()
+                .ok_or_else(|| "Invalid wav path".to_string())?,
+            "-t",
+            "8",       // Threads
+            "-l",
+            &language, // <--- 使用傳入的語言參數
+            "-nt",     // No timestamps (只輸出純文字)
+            "--prompt",
+            "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿",
         ])
         .output()
         .await
         .map_err(|e| format!("Whisper failed: {}", e))?;
 
-    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout).trim().to_string();
+    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout)
+        .trim()
+        .to_string();
     let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
 
     // 4. 存檔與回傳
@@ -631,7 +644,9 @@ async fn transcribe_external_file(
 
     // 成功音效
     thread::spawn(|| {
-        let _ = Command::new("afplay").arg("/System/Library/Sounds/Glass.aiff").output();
+        let _ = Command::new("afplay")
+            .arg("/System/Library/Sounds/Glass.aiff")
+            .output();
     });
 
     Ok(transcript_text)
