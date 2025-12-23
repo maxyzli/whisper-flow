@@ -615,3 +615,180 @@ header h1 {
   from { opacity: 0; transform: translateY(10px) translateX(-50%); }
   to { opacity: 1; transform: translateY(0) translateX(-50%); }
 }
+
+/* =========================================
+   Fixes & Permission Screen Styles
+   ========================================= */
+
+/* 1. 修正 Checkbox 對齊 (SRT 時間戳那個選項) */
+.checkbox-wrapper label.checkbox-label {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.85rem;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+@keyframes cardSlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); /* 只從下方 10px 處浮上來 */
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.permission-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  /* ✅ Layout 修正 */
+  padding: 80px 30px 40px 30px;
+  min-height: 100vh; 
+  text-align: center;
+  box-sizing: border-box; 
+  animation: fadeIn 0.4s ease-out;
+  
+  /* ✅ 功能：允許垂直捲動 */
+  overflow-y: auto;
+  
+  /* ✅ 視覺：隱藏捲軸 (Firefox) */
+  scrollbar-width: none; 
+  /* ✅ 視覺：隱藏捲軸 (IE 10+) */
+  -ms-overflow-style: none; 
+}
+
+.permission-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 20px rgba(10, 132, 255, 0.3));
+}
+
+.permission-container h1 {
+  font-size: 2rem;
+  margin: 0 0 16px 0;
+}
+
+.permission-desc {
+  color: var(--text-sub);
+  max-width: 580px; 
+  line-height: 1.6;
+  margin: 0 0 32px 0;
+  font-size: 1rem;
+}
+
+.hotkey-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  font-family: "SF Mono", monospace;
+  margin: 0 6px;
+  font-weight: 600;
+}
+
+/* 按鈕區塊 */
+.permission-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.btn-primary.large,
+.btn-secondary.large {
+  height: 44px;
+  padding: 0 32px;
+  font-size: 1rem;
+}
+
+/* 詳細說明區塊 */
+.permission-details-wrapper {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  transition: color 0.2s;
+}
+
+.link-btn:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.permission-card {
+  text-align: left;
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid var(--border-color);
+  width: 100%;
+  
+  /* ✅ 套用修正後的動畫，解決從左下角飛出來的問題 */
+  animation: cardSlideUp 0.3s ease-out forwards;
+}
+
+.permission-card h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-main);
+}
+
+.permission-card ul {
+  padding-left: 20px;
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.permission-card li {
+  margin-bottom: 12px;
+}
+
+.permission-card .highlight {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+.permission-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  text-align: center;
+}
+
+.permission-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 隱藏所有元素的 Scroll bar */
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* 兼容性設定（如果需要支援非 Webkit 瀏覽器） */
+* {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}

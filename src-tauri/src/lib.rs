@@ -1,5 +1,5 @@
 use futures_util::StreamExt;
-use macos_accessibility_client::accessibility::application_is_trusted;
+use macos_accessibility_client::accessibility;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -165,7 +165,16 @@ async fn interrupt_and_wait(pid: u32, timeout_ms: u64) {
 // -----------------------------
 #[tauri::command]
 fn check_accessibility_permission() -> bool {
-    application_is_trusted()
+    #[cfg(target_os = "macos")]
+    {
+        // 這一行做兩件事：
+        // 1. 回傳目前的權限狀態 (true/false)
+        // 2. 如果是 false，它會告訴 macOS 跳出那個「拒絕/打開系統設定」的原生對話框
+        return accessibility::application_is_trusted_with_prompt();
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    true // 非 macOS 預設回傳 true
 }
 
 #[tauri::command]
@@ -692,6 +701,18 @@ async fn transcribe_external_file(
     Ok(final_text)
 }
 
+#[tauri::command]
+fn open_accessibility_settings() {
+    #[cfg(target_os = "macos")]
+    {
+        // 這個指令會直接打開 macOS 的「安全性與隱私 -> 輔助使用」分頁
+        Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+            .spawn()
+            .expect("Failed to open system settings");
+    }
+}
+
 // -----------------------------
 // Entry point
 // -----------------------------
@@ -724,7 +745,8 @@ pub fn run() {
             update_global_shortcut,
             get_recordings_dir_cmd,
             open_recordings_dir,
-            transcribe_external_file
+            transcribe_external_file,
+            open_accessibility_settings
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
