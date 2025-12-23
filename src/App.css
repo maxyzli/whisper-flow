@@ -1,5 +1,5 @@
 /* =========================================================
-   Whisper Flow UI - Final (With Language Selection)
+   Whisper Flow UI - Final Fixed Version
    ========================================================= */
 
 /* -----------------------------
@@ -34,16 +34,31 @@ body {
 body {
   margin: 0;
   padding: 0;
-
   background: var(--bg-color);
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-
+  
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* do not vertically center */
-  user-select: none; /* prevent text selection except inputs */
+  align-items: flex-start;
+  user-select: none;
+}
+
+/* Custom Scrollbar for Webkit (macOS/Chrome-like feel) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* -----------------------------
@@ -51,20 +66,20 @@ body {
 ------------------------------ */
 .container {
   width: 100%;
-  max-width: 460px; /*稍微加寬一點點，讓三個選項更舒適 */
-
-  height: 100vh; /* lock to viewport height */
+  max-width: 100%; /* 🔥 修復：確保不超過視窗寬度 */
+  height: 100vh;
   box-sizing: border-box;
-
-  padding: 16px;
+  padding: 12px; /* 稍微縮小邊距 */
+  
   display: flex;
   flex-direction: column;
   gap: 12px;
-
-  overflow: hidden; /* avoid whole-page scrolling */
+  
+  /* 🔥 修復：內容過多時允許垂直捲動，禁止水平捲動 */
+  overflow-y: auto;
+  overflow-x: hidden; 
 }
 
-/* Generic card */
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
@@ -73,14 +88,16 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Utility: Action Row for buttons */
+/* Utility: Action Row */
 .action-row {
   margin-top: 12px;
   display: flex;
   justify-content: center;
+  align-items: center;
+  width: 100%; /* 確保容器本身撐滿 */
 }
 
-/* Utility: Full Width Button */
+/* Utility: Full Width */
 .full-width {
   width: 100%;
   display: flex;
@@ -95,7 +112,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 header h1 {
@@ -112,103 +129,91 @@ header h1 {
   font-weight: 600;
 }
 
-.tag.idle {
-  background: #3a3a3a;
-  color: var(--text-sub);
-}
-
-.tag.recording {
-  background: rgba(255, 69, 58, 0.2);
-  color: var(--danger);
-  animation: pulse 1.5s infinite;
-}
-
-.tag.processing {
-  background: rgba(10, 132, 255, 0.2);
-  color: var(--primary);
-}
+.tag.idle { background: #3a3a3a; color: var(--text-sub); }
+.tag.recording { background: rgba(255, 69, 58, 0.2); color: var(--danger); animation: pulse 1.5s infinite; }
+.tag.processing { background: rgba(10, 132, 255, 0.2); color: var(--primary); }
 
 /* -----------------------------
-   5) Settings grid + inputs (重點修改區)
+   5) Settings grid + inputs
 ------------------------------ */
 .grid-row {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 改回 1fr 1fr (兩欄) */
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: end;
 }
 
-/* 如果螢幕真的太窄，強迫換行 */
-@media (max-width: 380px) {
-  .grid-row {
-    grid-template-columns: 1fr; /* 變成單欄 */
-  }
+.input-group {
+  display: flex;
+  flex-direction: column;
 }
 
 .input-group label {
-  display: block;
   margin-bottom: 6px;
-
-  font-size: 0.7rem; /* 稍微縮小字體 */
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-sub);
-  white-space: nowrap; /* 防止文字換行 */
 }
 
-/* Select */
+/* Select Styling */
 .modern-select {
   width: 100%;
-  padding: 8px 8px; /* 縮小左右 padding */
-
+  height: 36px;
+  padding: 0 8px;
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-
   color: var(--text-main);
-  font-size: 0.85rem; /* 字體微調 */
-
+  font-size: 0.85rem;
   outline: none;
-  appearance: none;
   cursor: pointer;
-  text-overflow: ellipsis; /* 文字過長顯示 ... */
+  
+  appearance: none; 
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
 }
 
 .modern-select:focus {
   border-color: var(--primary);
 }
 
-.modern-select.transparent {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: var(--text-sub);
+.modern-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Shortcut button */
 .shortcut-btn {
   width: 100%;
-  padding: 8px 4px; /* 縮小 Padding */
-
+  height: 36px;
+  padding: 0 10px;
+  
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-
+  
   color: var(--primary);
   font-family: "SF Mono", monospace;
-  font-size: 0.8rem; /* 字體微調，避免被切掉 */
+  font-size: 0.85rem;
   font-weight: 600;
-
+  
   cursor: pointer;
   transition: all 0.2s;
   
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.shortcut-btn:hover {
+.shortcut-btn:hover:not(:disabled) {
   border-color: var(--primary);
+  background: rgba(10, 132, 255, 0.1);
 }
 
 .shortcut-btn.active {
@@ -217,28 +222,62 @@ header h1 {
   border-color: var(--primary);
 }
 
+.shortcut-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
 /* -----------------------------
    6) Download progress
 ------------------------------ */
-.download-area {
-  margin-top: 12px;
-}
-
 .progress-bar {
-  height: 6px;
+  width: 100%; /* 🔥 修復：確保撐滿容器 */
+  height: 8px; 
   background: #444;
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
+  position: relative;
 }
 
 .progress-bar .fill {
   height: 100%;
   background: var(--success);
-  transition: width 0.3s;
+  transition: width 0.2s linear;
 }
 
 /* -----------------------------
-   7) Recording controls
+   7) Buttons (Primary / Secondary)
+------------------------------ */
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* -----------------------------
+   8) Recording controls
 ------------------------------ */
 .control-card {
   display: flex;
@@ -250,49 +289,58 @@ header h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 2px;
+}
 
-  padding: 0 4px;
-  font-size: 0.8rem;
+.device-select-row .modern-select.transparent {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-sub);
+  width: auto; 
+  background-image: none; 
 }
 
 .icon-btn {
   background: none;
   border: none;
-
   color: var(--text-sub);
   font-size: 1.1rem;
-
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
 .icon-btn:hover {
   color: var(--text-main);
+  background: rgba(255,255,255,0.1);
 }
 
-/* Main record button */
+/* Big Record Button */
 .record-main-btn {
   width: 100%;
-  height: 50px;
-
+  height: 52px;
   border: none;
-  border-radius: 25px; /* pill */
+  border-radius: 26px;
   background: #3a3a3a;
-
   color: var(--text-main);
   font-size: 1rem;
   font-weight: 600;
-
   cursor: pointer;
+  
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-
+  
   transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.record-main-btn:hover {
+.record-main-btn:hover:not(:disabled) {
   background: #444;
+  transform: translateY(-1px);
 }
 
 .record-main-btn .inner-circle {
@@ -307,11 +355,12 @@ header h1 {
   background: rgba(255, 69, 58, 0.15);
   color: var(--danger);
   border: 1px solid rgba(255, 69, 58, 0.3);
+  box-shadow: 0 0 15px rgba(255, 69, 58, 0.2);
 }
 
 .record-main-btn.recording .inner-circle {
   border-radius: 2px;
-  transform: scale(1.2);
+  transform: scale(1.1);
 }
 
 .record-main-btn:disabled {
@@ -320,11 +369,11 @@ header h1 {
 }
 
 /* -----------------------------
-   8) Result / transcript
+   9) Result / transcript
 ------------------------------ */
 .result-section {
   flex: 1;
-  min-height: 0; /* allow children to shrink */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -347,36 +396,34 @@ header h1 {
   background: transparent;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 0.7rem;
-
   color: var(--text-sub);
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .copy-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background: rgba(10, 132, 255, 0.05);
 }
 
 .transcript-box {
   flex: 1;
-  min-height: 200px; /* avoid forcing min height */
-  overflow: auto; /* scroll inside textarea */
-
+  min-height: 0; 
+  
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-
   color: var(--text-main);
   padding: 12px;
-
-  font-size: 1rem;
-  line-height: 1.5;
-
+  font-size: 0.95rem;
+  line-height: 1.6;
+  
   resize: none;
   outline: none;
+  transition: border-color 0.2s;
 }
 
 .transcript-box:focus {
@@ -384,118 +431,128 @@ header h1 {
 }
 
 /* -----------------------------
-   9) Recordings folder row
+   10) Folder Row (Re-designed)
 ------------------------------ */
 .folder-row {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 
+  /* 🔥 魔法佈局：使用 Grid 控制內部所有元素 */
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto; /* 左邊路徑 | 右邊按鈕 */
+  grid-template-rows: auto auto;   /* 上面標題 | 下面內容 */
+  gap: 8px; /* 垂直與水平間距 */
   align-items: center;
-  gap: 10px;
 }
 
+/* 🔥 關鍵：把 .folder-meta "拆掉"，讓它的子元素 (Label, Path) 直接參與 Grid 排版 */
 .folder-meta {
-  min-width: 0;
+  display: contents;
 }
 
+/* 1. Label: 放在第一列，跨越兩欄 */
 .folder-label {
-  margin-bottom: 6px;
+  grid-column: 1 / -1; 
+  grid-row: 1;
 
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-sub);
-
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
+/* 2. Path: 放在第二列左邊，並美化成 Input 風格 */
 .folder-path {
-  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-size: 0.82rem;
-  line-height: 1.3;
+  grid-column: 1; 
+  grid-row: 2;
 
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.05);
-
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-
+  /* 讓它看起來跟上面的選單一樣 */
+  height: 32px;
+  line-height: 30px; /* 垂直置中 */
+  background: var(--input-bg); /* 改成實色背景 */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 10px;
+  
+  font-family: "SF Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--text-main);
+  
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
+  transition: border-color 0.2s;
 }
 
+.folder-path:hover {
+  border-color: #666;
+}
+
+/* 3. Actions: 放在第二列右邊 */
 .folder-actions {
+  grid-column: 2;
+  grid-row: 2;
+
   display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-/* Secondary button */
+/* 按鈕美化：高度與路徑欄一致 */
 .btn-secondary {
-  height: 34px;
+  height: 32px; /* 統一高度 */
   padding: 0 12px;
-  border-radius: 10px;
-
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-
-  font-size: 0.82rem;
-  font-weight: 600;
-
+  border-radius: 8px;
+  
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 500;
+  
   cursor: pointer;
-  transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: all 0.2s;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-secondary:hover {
-  border-color: rgba(10, 132, 255, 0.7);
-  background: rgba(10, 132, 255, 0.12);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-sub);
 }
 
 .btn-secondary:active {
   transform: translateY(1px);
 }
 
-.btn-secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
 /* -----------------------------
-   10) Toast / overlay / permissions
+   11) Overlays & Permissions
 ------------------------------ */
 .error-toast {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-
   background: var(--danger);
-  color: #ffffff;
-
-  padding: 8px 16px;
-  border-radius: 20px;
-
-  font-size: 0.85rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 100;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .overlay {
   position: fixed;
   inset: 0;
-
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -503,107 +560,55 @@ header h1 {
 }
 
 .overlay-msg {
-  color: #ffffff;
-  font-size: 1.2rem;
+  color: #fff;
+  font-size: 1.3rem;
   font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .permission-screen {
   text-align: center;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
+  height: 100vh;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: #ffffff;
-
-  border: none;
-  border-radius: 8px;
-
-  padding: 10px 20px;
-  font-size: 0.9rem;
-
-  cursor: pointer;
-}
-
-.btn-text {
-  background: none;
-  border: none;
-
-  color: var(--text-sub);
-  text-decoration: underline;
-
-  margin-top: 10px;
-  cursor: pointer;
-}
-
-/* -----------------------------
-   11) Animations
------------------------------- */
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* -----------------------------
-   12) Drag & Drop Overlay
------------------------------- */
+/* Drag Overlay */
 .drag-overlay {
   position: fixed;
-  inset: 0; /* fill entire window */
-  background: rgba(30, 30, 30, 0.95);
-  z-index: 999; /* on top of everything */
-
+  inset: 0;
+  background: rgba(20, 20, 20, 0.9);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  /* animate fade in */
   animation: fadeIn 0.2s ease-out;
 }
 
 .drag-content {
-  width: 80%;
-  height: 80%;
-
-  border: 4px dashed var(--primary);
+  width: 90%;
+  height: 90%;
+  border: 3px dashed var(--primary);
   border-radius: 20px;
-  background: rgba(10, 132, 255, 0.1);
-
+  background: rgba(10, 132, 255, 0.05);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-
   color: var(--primary);
 }
 
-.drag-icon {
-  font-size: 4rem;
-  filter: drop-shadow(0 0 10px rgba(10, 132, 255, 0.5));
+.drag-icon { font-size: 4rem; margin-bottom: 16px; }
+.drag-text { font-size: 1.4rem; font-weight: 600; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
 }
 
-.drag-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px) translateX(-50%); }
+  to { opacity: 1; transform: translateY(0) translateX(-50%); }
 }

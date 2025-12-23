@@ -189,6 +189,8 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
     let tmp_path = model_path.with_extension("tmp");
     let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    
+    // 注意：有些網路環境可能拿不到 Content-Length，這裡預設為 0
     let total_size = response.content_length().unwrap_or(0);
 
     let mut file = tokio::fs::File::create(&tmp_path)
@@ -197,6 +199,9 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
+    
+    // --- 🔥 修正開始：加入 last_progress 變數 ---
+    let mut last_progress: u8 = 0;
 
     while let Some(chunk) = stream.next().await {
         let data = chunk.map_err(|e| e.to_string())?;
@@ -205,15 +210,21 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
         if total_size > 0 {
             let progress = ((downloaded as f64 / total_size as f64) * 100.0) as u8;
-            let _ = app.emit(
-                "download-progress",
-                DownloadProgress {
-                    progress: progress.min(100),
-                    total_bytes: total_size,
-                },
-            );
+            
+            // 🔥 只有當進度數值改變時 (例如 1% -> 2%) 才發送事件
+            if progress > last_progress {
+                last_progress = progress;
+                let _ = app.emit(
+                    "download-progress",
+                    DownloadProgress {
+                        progress, // 這裡其實可以用 progress.min(100)
+                        total_bytes: total_size,
+                    },
+                );
+            }
         }
     }
+    // --- 修正結束 ---
 
     file.flush().await.map_err(|e| e.to_string())?;
     tokio::fs::rename(tmp_path, model_path)
