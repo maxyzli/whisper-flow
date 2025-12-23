@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node modules & Dist
 node_modules
 dist
 dist-ssr
@@ -22,3 +23,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ---------------------------------
+# Rust & Tauri (Added)
+# ---------------------------------
+# Rust build artifacts (These are huge, do not commit)
+src-tauri/target/
+
+# Tauri v2 generated bindings (Safe to ignore)
+src-tauri/gen/
+
+# ---------------------------------
+# Binaries (External Executables)
+# ---------------------------------
+# Ignore all files inside the binaries folder (ffmpeg, whisper-cli)
+src-tauri/binaries/*
+
+# BUT! Keep the folder itself by allowing this specific file
+!src-tauri/binaries/.gitkeep
