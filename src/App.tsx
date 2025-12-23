@@ -36,7 +36,6 @@ function App() {
   const [selectedModel, setSelectedModel] = useState(
     () => localStorage.getItem("wf_model") || "small"
   );
-  // 新增：語言狀態
   const [selectedLanguage, setSelectedLanguage] = useState(
     () => localStorage.getItem("wf_language") || "zh"
   );
@@ -46,12 +45,16 @@ function App() {
   const [shortcutKey, setShortcutKey] = useState(
     () => localStorage.getItem("wf_shortcut") || "Alt+Space"
   );
+  // 新增：是否包含時間戳 (SRT)
+  const [withTimestamps, setWithTimestamps] = useState(
+    () => localStorage.getItem("wf_timestamps") === "true"
+  );
 
   // UI 狀態
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false); // 正在錄製快捷鍵
-  const [isDragging, setIsDragging] = useState(false); // 新增：拖拽狀態
+  const [isDragging, setIsDragging] = useState(false); // 拖拽狀態
 
   // 運作流程狀態
   const [isStarting, setIsStarting] = useState(false); // FFmpeg 啟動中
@@ -77,6 +80,7 @@ function App() {
     selectedDevice,
     selectedModel,
     selectedLanguage,
+    withTimestamps, // 加入 Ref 同步
   });
 
   // --- 1. 狀態同步 (Ref Pattern) ---
@@ -89,12 +93,14 @@ function App() {
       selectedDevice,
       selectedModel,
       selectedLanguage,
+      withTimestamps,
     };
     // 同步儲存到 LocalStorage
     localStorage.setItem("wf_model", selectedModel);
     localStorage.setItem("wf_language", selectedLanguage);
     localStorage.setItem("wf_device", selectedDevice);
     localStorage.setItem("wf_shortcut", shortcutKey);
+    localStorage.setItem("wf_timestamps", String(withTimestamps));
   }, [
     isRecording,
     isStarting,
@@ -104,6 +110,7 @@ function App() {
     selectedModel,
     selectedLanguage,
     shortcutKey,
+    withTimestamps,
   ]);
 
   // --- 2. 初始化與事件監聽 ---
@@ -263,7 +270,7 @@ function App() {
       try {
         const result = await invoke<string>("stop_and_transcribe", {
           modelType: current.selectedModel,
-          language: current.selectedLanguage, // 傳入當前語言設定
+          language: current.selectedLanguage,
         });
         setTranscription(result);
         await writeText(result); // 自動複製
@@ -279,14 +286,15 @@ function App() {
 
   // --- 共用：處理單一檔案轉錄 (用於 Dialog 與 Drop) ---
   const handleFileProcess = async (filePath: string) => {
-    // 檢查系統狀態
     const current = stateRef.current;
+    
+    // 檢查系統狀態
     if (current.isRecording || current.isStarting || current.isLoading) {
       setError("系統忙碌中，請稍後再試");
       return;
     }
 
-    // 簡單副檔名檢查 (Optional)
+    // 簡單副檔名檢查
     const validExts = ["mp4", "mp3", "m4a", "wav", "mov", "mkv"];
     const ext = filePath.split(".").pop()?.toLowerCase();
     if (!ext || !validExts.includes(ext)) {
@@ -300,11 +308,12 @@ function App() {
     console.log("Processing file:", filePath);
 
     try {
-      // Invoke Rust command
+      // 呼叫 Rust (帶入 withTimestamps)
       const result = await invoke<string>("transcribe_external_file", {
         filePath: filePath,
         modelType: current.selectedModel,
-        language: current.selectedLanguage, // 傳入當前語言設定
+        language: current.selectedLanguage,
+        withTimestamps: current.withTimestamps, // 🔥 傳遞時間戳設定
       });
 
       setTranscription(result);
@@ -431,7 +440,7 @@ function App() {
 
       {/* 設定區塊 */}
       <section className="card settings-card">
-        {/* 第一排：AI 模型 & 語言 (左右平分) */}
+        {/* 第一排：AI 模型 & 語言 */}
         <div className="grid-row">
           <div className="input-group">
             <label>AI 模型</label>
@@ -466,7 +475,7 @@ function App() {
           </div>
         </div>
 
-        {/* 第二排：快捷鍵 (獨立一行，寬度全滿) */}
+        {/* 第二排：快捷鍵 */}
         <div className="input-group" style={{ marginTop: "12px" }}>
           <label>快捷鍵</label>
           <button
@@ -479,9 +488,23 @@ function App() {
               : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
           </button>
         </div>
+        
+        {/* 第三排：檔案匯入設定 (時間戳) */}
+        <div className="input-group checkbox-wrapper" style={{ marginTop: "12px" }}>
+          <label className="checkbox-label">
+            <input 
+              type="checkbox" 
+              checked={withTimestamps}
+              onChange={(e) => setWithTimestamps(e.target.checked)}
+              disabled={isRecording || isStarting || isLoading}
+            />
+            <span className="checkmark"></span>
+            匯入檔案時包含時間戳 (SRT 字幕格式)
+          </label>
+        </div>
 
-        {/* 模型下載與檔案匯入 */}
-        <div className="action-row" style={{ marginTop: "12px" }}>
+        {/* 模型下載與檔案匯入按鈕 */}
+        <div className="action-row" style={{ marginTop: "16px" }}>
           {!modelStatus.exists ? (
             downloading ? (
               <div className="progress-bar">
@@ -509,7 +532,7 @@ function App() {
           )}
         </div>
 
-        {/* Recordings Folder Info */}
+        {/* Folder Info */}
         <div className="folder-row">
           <div className="folder-meta">
             <div className="folder-label">Recordings Folder</div>
@@ -520,7 +543,7 @@ function App() {
 
           <div className="folder-actions">
             <button
-              className="btn-secondary"
+              className="btn-secondary small"
               onClick={openRecordingsFolder}
               disabled={!recordingsDir}
               title="在 Finder 打開"
@@ -528,7 +551,7 @@ function App() {
               Open
             </button>
             <button
-              className="btn-secondary"
+              className="btn-secondary small"
               onClick={() => writeText(recordingsDir)}
               disabled={!recordingsDir}
               title="複製路徑"
@@ -616,6 +639,7 @@ function App() {
           <div className="drag-content">
             <div className="drag-icon">📂</div>
             <div className="drag-text">釋放以匯入檔案</div>
+            <div className="drag-subtext">{withTimestamps ? "將生成 SRT 字幕" : "純文字模式"}</div>
           </div>
         </div>
       )}

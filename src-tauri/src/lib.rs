@@ -95,17 +95,24 @@ fn get_model_info(app: &AppHandle, model_type: &str) -> Result<(PathBuf, String)
     Ok((model_path, url))
 }
 
-/// Creates a new per-recording session folder:
-/// <app_data_dir>/recordings/<YYYY-MM-DD_HH-MM-SS>/
-/// and returns paths for raw/wav/transcript files.
-fn new_session_paths(app: &AppHandle) -> Result<(String, PathBuf, PathBuf, PathBuf, PathBuf), String> {
-    use chrono::Local;
-
+fn get_recordings_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     ensure_dir(&app_dir)?;
 
     let recordings_dir = app_dir.join("recordings");
     ensure_dir(&recordings_dir)?;
+    Ok(recordings_dir)
+}
+
+/// Creates a new per-recording session folder:
+/// <app_data_dir>/recordings/<YYYY-MM-DD_HH-MM-SS>/
+/// and returns paths for raw/wav/transcript files.
+fn new_session_paths(
+    app: &AppHandle,
+) -> Result<(String, PathBuf, PathBuf, PathBuf, PathBuf), String> {
+    use chrono::Local;
+
+    let recordings_dir = get_recordings_dir(app)?;
 
     let session_id = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     let session_dir = recordings_dir.join(&session_id);
@@ -115,7 +122,13 @@ fn new_session_paths(app: &AppHandle) -> Result<(String, PathBuf, PathBuf, PathB
     let wav_path = session_dir.join("input_16k.wav");
     let transcript_path = session_dir.join("transcript.txt");
 
-    Ok((session_id, session_dir, raw_path, wav_path, transcript_path))
+    Ok((
+        session_id,
+        session_dir,
+        raw_path,
+        wav_path,
+        transcript_path,
+    ))
 }
 
 /// Returns true if a process with pid still exists.
@@ -189,8 +202,8 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
     let tmp_path = model_path.with_extension("tmp");
     let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
-    
-    // 注意：有些網路環境可能拿不到 Content-Length，這裡預設為 0
+
+    // Note: Some networks might not provide Content-Length; default to 0.
     let total_size = response.content_length().unwrap_or(0);
 
     let mut file = tokio::fs::File::create(&tmp_path)
@@ -199,8 +212,8 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
-    
-    // --- 🔥 修正開始：加入 last_progress 變數 ---
+
+    // Optimization: Track last progress to prevent spamming the frontend event loop
     let mut last_progress: u8 = 0;
 
     while let Some(chunk) = stream.next().await {
@@ -210,21 +223,20 @@ async fn download_model(app: AppHandle, model_type: String) -> Result<String, St
 
         if total_size > 0 {
             let progress = ((downloaded as f64 / total_size as f64) * 100.0) as u8;
-            
-            // 🔥 只有當進度數值改變時 (例如 1% -> 2%) 才發送事件
+
+            // Only emit event if integer progress percentage changed
             if progress > last_progress {
                 last_progress = progress;
                 let _ = app.emit(
                     "download-progress",
                     DownloadProgress {
-                        progress, // 這裡其實可以用 progress.min(100)
+                        progress,
                         total_bytes: total_size,
                     },
                 );
             }
         }
     }
-    // --- 修正結束 ---
 
     file.flush().await.map_err(|e| e.to_string())?;
     tokio::fs::rename(tmp_path, model_path)
@@ -285,7 +297,6 @@ async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>, St
     Ok(devices)
 }
 
-// Dynamically update global shortcut (register/unregister)
 #[tauri::command]
 fn update_global_shortcut(app: AppHandle, shortcut_str: String) -> Result<(), String> {
     println!("Updating shortcut to: {}", shortcut_str);
@@ -298,6 +309,28 @@ fn update_global_shortcut(app: AppHandle, shortcut_str: String) -> Result<(), St
     app.global_shortcut()
         .register(shortcut)
         .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn get_recordings_dir_cmd(app: AppHandle) -> Result<String, String> {
+    let dir = get_recordings_dir(&app)?;
+    Ok(dir.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn open_recordings_dir(app: AppHandle) -> Result<(), String> {
+    let dir = get_recordings_dir(&app)?;
+    if !dir.exists() {
+        return Err(format!("Recordings dir does not exist: {}", dir.display()));
+    }
+
+    // macOS: open in Finder
+    Command::new("open")
+        .arg(&dir)
+        .spawn()
+        .map_err(|e| format!("Failed to open folder: {}", e))?;
 
     Ok(())
 }
@@ -318,7 +351,7 @@ async fn start_recording(
         return Ok("Already Recording".into());
     }
 
-    let (session_id, session_dir, raw_path, wav_path, transcript_path) = new_session_paths(&app)?;
+    let (session_id, session_dir, raw_path, _, transcript_path) = new_session_paths(&app)?;
 
     println!(
         "--- [Debug] Start Recording (session: {}, device: {}) ---",
@@ -371,11 +404,12 @@ async fn start_recording(
         }
     });
 
+    // Populate the session state
     *guard = Some(RecordingSession {
         id: session_id.clone(),
         dir: session_dir,
         raw_path,
-        wav_path,
+        wav_path: transcript_path.with_file_name("input_16k.wav"), // reconstruct for consistency
         transcript_path,
         child,
     });
@@ -391,7 +425,7 @@ async fn stop_and_transcribe(
     app: AppHandle,
     state: State<'_, AppState>,
     model_type: String,
-    language: String, // <--- 接收前端傳來的語言設定 (e.g., "auto", "zh", "en")
+    language: String,
 ) -> Result<String, String> {
     println!("--- [Debug] Stop requested (Lang: {}) ---", language);
 
@@ -401,7 +435,7 @@ async fn stop_and_transcribe(
         guard.take()
     };
 
-    let mut session = match session {
+    let session = match session {
         Some(s) => s,
         None => return Err("No active recording session".into()),
     };
@@ -409,7 +443,7 @@ async fn stop_and_transcribe(
     let pid = session.child.pid();
     println!("Sending SIGINT to FFmpeg PID: {}...", pid);
 
-    // Stop gracefully and wait until it actually exits (prevents partial writes / file races)
+    // Stop gracefully and wait until it actually exits
     interrupt_and_wait(pid, 3000).await;
 
     // Validate raw output
@@ -484,8 +518,8 @@ async fn stop_and_transcribe(
             "-t",
             "8",
             "-l",
-            &language, // <--- 使用傳入的語言參數
-            "-nt",
+            &language,
+            "-nt", // No timestamps for quick dictation
             "--prompt",
             "API, Python, SDE, Amazon, 繁體中文, 技術討論, Rust, React, debug",
         ])
@@ -498,7 +532,7 @@ async fn stop_and_transcribe(
         .to_string();
     let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
 
-    // Persist transcript.txt (always write something for traceability)
+    // Persist transcript.txt
     let transcript_body = if !transcript_text.is_empty() {
         transcript_text.clone()
     } else {
@@ -524,45 +558,7 @@ async fn stop_and_transcribe(
         });
     }
 
-    // Return transcript + session id for UI tracking
     Ok(transcript_text)
-}
-
-// -----------------------------
-// Helpers (add)
-// -----------------------------
-fn get_recordings_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    ensure_dir(&app_dir)?;
-
-    let recordings_dir = app_dir.join("recordings");
-    ensure_dir(&recordings_dir)?;
-    Ok(recordings_dir)
-}
-
-// -----------------------------
-// Tauri Commands (add)
-// -----------------------------
-#[tauri::command]
-fn get_recordings_dir_cmd(app: AppHandle) -> Result<String, String> {
-    let dir = get_recordings_dir(&app)?;
-    Ok(dir.to_string_lossy().to_string())
-}
-
-#[tauri::command]
-fn open_recordings_dir(app: AppHandle) -> Result<(), String> {
-    let dir = get_recordings_dir(&app)?;
-    if !dir.exists() {
-        return Err(format!("Recordings dir does not exist: {}", dir.display()));
-    }
-
-    // macOS: open in Finder
-    Command::new("open")
-        .arg(&dir)
-        .spawn()
-        .map_err(|e| format!("Failed to open folder: {}", e))?;
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -570,17 +566,18 @@ async fn transcribe_external_file(
     app: AppHandle,
     file_path: String,
     model_type: String,
-    language: String, // <--- 接收前端傳來的語言設定
+    language: String,
+    with_timestamps: bool,
 ) -> Result<String, String> {
     println!(
-        "--- [Debug] Processing external file: {} (Lang: {}) ---",
-        file_path, language
+        "--- [Debug] Processing external file: {} (Lang: {}, Timestamps: {}) ---",
+        file_path, language, with_timestamps
     );
 
-    // 1. 建立一個新的 Session 資料夾 (借用現有的 helper)
+    // 1. Create a new Session folder
     let (_, _, _, wav_path, transcript_path) = new_session_paths(&app)?;
 
-    // 2. 使用 FFmpeg 將任意輸入檔 (MP4, MP3, MOV...) 轉為 16kHz WAV
+    // 2. Use FFmpeg to convert input (MP4/MP3/etc) to 16kHz WAV
     println!("Converting to WAV...");
     let convert_result = app
         .shell()
@@ -608,43 +605,75 @@ async fn transcribe_external_file(
         return Err(format!("FFmpeg conversion failed: {}", stderr));
     }
 
-    // 3. 執行 Whisper (邏輯與 stop_and_transcribe 相同)
-    println!("Running Whisper on converted file...");
+    // 3. Prepare Whisper parameters
+    println!("Running Whisper...");
     let (model_path, _) = get_model_info(&app, &model_type)?;
 
+    let mut whisper_args = vec![
+        "-m".to_string(),
+        model_path.to_str().unwrap().to_string(),
+        "-f".to_string(),
+        wav_path.to_str().unwrap().to_string(),
+        "-t".to_string(),
+        "8".to_string(),
+        "-l".to_string(),
+        language.clone(),
+        "--prompt".to_string(),
+        // Kept prompts in mixed language to maintain accuracy for your specific use case
+        "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿".to_string(),
+    ];
+
+    // Toggle between timestamps (SRT) and plain text
+    if with_timestamps {
+        // -osrt outputs a .srt file.
+        // whisper.cpp convention: input.wav -> input.wav.srt
+        whisper_args.push("-osrt".to_string());
+    } else {
+        // -nt means No Timestamps (plain text to stdout)
+        whisper_args.push("-nt".to_string());
+    }
+
+    // 4. Run Whisper
     let whisper_output = app
         .shell()
         .sidecar("whisper-cli")
         .map_err(|e| e.to_string())?
-        .args([
-            "-m",
-            model_path
-                .to_str()
-                .ok_or_else(|| "Invalid model path".to_string())?,
-            "-f",
-            wav_path
-                .to_str()
-                .ok_or_else(|| "Invalid wav path".to_string())?,
-            "-t",
-            "8",       // Threads
-            "-l",
-            &language, // <--- 使用傳入的語言參數
-            "-nt",     // No timestamps (只輸出純文字)
-            "--prompt",
-            "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿",
-        ])
+        .args(whisper_args)
         .output()
         .await
         .map_err(|e| format!("Whisper failed: {}", e))?;
 
-    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout)
-        .trim()
-        .to_string();
+    let final_text: String;
+
+    if with_timestamps {
+        // Attempt to read the generated .srt file
+        // Since input was `.../input_16k.wav`, output should be `.../input_16k.wav.srt`
+        let srt_path = wav_path.with_extension("wav.srt");
+
+        if srt_path.exists() {
+            println!("Reading generated SRT file: {:?}", srt_path);
+            final_text = tokio::fs::read_to_string(&srt_path)
+                .await
+                .map_err(|e| format!("Failed to read SRT file: {}", e))?;
+        } else {
+            // Fallback to stdout if SRT file generation failed
+            println!("Warning: SRT file not found, falling back to stdout");
+            final_text = String::from_utf8_lossy(&whisper_output.stdout)
+                .trim()
+                .to_string();
+        }
+    } else {
+        // Plain text mode: read directly from stdout
+        final_text = String::from_utf8_lossy(&whisper_output.stdout)
+            .trim()
+            .to_string();
+    }
+
     let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
 
-    // 4. 存檔與回傳
-    let transcript_body = if !transcript_text.is_empty() {
-        transcript_text.clone()
+    // 5. Persist and return
+    let transcript_body = if !final_text.is_empty() {
+        final_text.clone()
     } else {
         format!("(empty)\n\nstderr:\n{}", whisper_stderr)
     };
@@ -653,14 +682,14 @@ async fn transcribe_external_file(
         .await
         .map_err(|e| format!("Failed to write transcript: {}", e))?;
 
-    // 成功音效
+    // Success sound
     thread::spawn(|| {
         let _ = Command::new("afplay")
             .arg("/System/Library/Sounds/Glass.aiff")
             .output();
     });
 
-    Ok(transcript_text)
+    Ok(final_text)
 }
 
 // -----------------------------

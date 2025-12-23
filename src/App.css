@@ -66,16 +66,15 @@ body {
 ------------------------------ */
 .container {
   width: 100%;
-  max-width: 100%; /* 🔥 修復：確保不超過視窗寬度 */
+  max-width: 100%;
   height: 100vh;
   box-sizing: border-box;
-  padding: 12px; /* 稍微縮小邊距 */
+  padding: 12px;
   
   display: flex;
   flex-direction: column;
   gap: 12px;
   
-  /* 🔥 修復：內容過多時允許垂直捲動，禁止水平捲動 */
   overflow-y: auto;
   overflow-x: hidden; 
 }
@@ -94,7 +93,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%; /* 確保容器本身撐滿 */
+  width: 100%;
 }
 
 /* Utility: Full Width */
@@ -153,6 +152,16 @@ header h1 {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-sub);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Checkbox styling within label */
+.input-group input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 /* Select Styling */
@@ -232,12 +241,13 @@ header h1 {
    6) Download progress
 ------------------------------ */
 .progress-bar {
-  width: 100%; /* 🔥 修復：確保撐滿容器 */
+  width: 100%;
   height: 8px; 
   background: #444;
   border-radius: 4px;
   overflow: hidden;
   position: relative;
+  margin-top: 8px; /* Added slight margin */
 }
 
 .progress-bar .fill {
@@ -438,20 +448,17 @@ header h1 {
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 
-  /* 🔥 魔法佈局：使用 Grid 控制內部所有元素 */
   display: grid;
-  grid-template-columns: 1fr auto; /* 左邊路徑 | 右邊按鈕 */
-  grid-template-rows: auto auto;   /* 上面標題 | 下面內容 */
-  gap: 8px; /* 垂直與水平間距 */
+  grid-template-columns: 1fr auto; 
+  grid-template-rows: auto auto;   
+  gap: 8px; 
   align-items: center;
 }
 
-/* 🔥 關鍵：把 .folder-meta "拆掉"，讓它的子元素 (Label, Path) 直接參與 Grid 排版 */
 .folder-meta {
   display: contents;
 }
 
-/* 1. Label: 放在第一列，跨越兩欄 */
 .folder-label {
   grid-column: 1 / -1; 
   grid-row: 1;
@@ -463,15 +470,13 @@ header h1 {
   margin: 0;
 }
 
-/* 2. Path: 放在第二列左邊，並美化成 Input 風格 */
 .folder-path {
   grid-column: 1; 
   grid-row: 2;
 
-  /* 讓它看起來跟上面的選單一樣 */
   height: 32px;
-  line-height: 30px; /* 垂直置中 */
-  background: var(--input-bg); /* 改成實色背景 */
+  line-height: 30px; 
+  background: var(--input-bg); 
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0 10px;
@@ -491,7 +496,6 @@ header h1 {
   border-color: #666;
 }
 
-/* 3. Actions: 放在第二列右邊 */
 .folder-actions {
   grid-column: 2;
   grid-row: 2;
@@ -500,9 +504,8 @@ header h1 {
   gap: 8px;
 }
 
-/* 按鈕美化：高度與路徑欄一致 */
 .btn-secondary {
-  height: 32px; /* 統一高度 */
+  height: 32px; 
   padding: 0 12px;
   border-radius: 8px;
   
