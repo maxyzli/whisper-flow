@@ -1,18 +1,21 @@
-use futures_util::StreamExt;
-use macos_accessibility_client::accessibility;
-use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::sync::Mutex;
 use std::thread;
+
+use chrono::Local;
+use futures_util::StreamExt;
+use macos_accessibility_client::accessibility;
+use serde::{Deserialize, Serialize};
+use tokio::io::AsyncWriteExt;
+
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_global_shortcut::{
-    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState,
+    GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState,
 };
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
-use tokio::io::AsyncWriteExt;
 
 // -----------------------------
 // Configuration
@@ -110,8 +113,6 @@ fn get_recordings_dir(app: &AppHandle) -> Result<PathBuf, String> {
 fn new_session_paths(
     app: &AppHandle,
 ) -> Result<(String, PathBuf, PathBuf, PathBuf, PathBuf), String> {
-    use chrono::Local;
-
     let recordings_dir = get_recordings_dir(app)?;
 
     let session_id = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
