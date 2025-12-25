@@ -1,7 +1,6 @@
 import { LANGUAGE_OPTIONS, ModelStatus } from "../constants";
 
 interface SettingsCardProps {
-  selectedModel: string;
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
   isRecording: boolean;
@@ -22,7 +21,6 @@ interface SettingsCardProps {
 }
 
 export function SettingsCard({
-  selectedModel,
   selectedLanguage,
   setSelectedLanguage,
   isRecording,
@@ -96,18 +94,24 @@ export function SettingsCard({
       <div className="action-row" style={{ marginTop: "16px" }}>
         {!modelStatus.exists ? (
           downloading ? (
-            <div className="progress-bar">
-              <div
-                className="fill"
-                style={{ width: `${downloadProgress}%` }}
-              ></div>
+            <div className="download-container full-width">
+              <div className="progress-label">
+                <span>正在初始化 AI 模型...</span>
+                <span>{downloadProgress}%</span>
+              </div>
+              <div className="progress-bar">
+                <div
+                  className="fill"
+                  style={{ width: `${downloadProgress}%` }}
+                ></div>
+              </div>
             </div>
           ) : (
             <button
               className="btn-primary full-width"
               onClick={handleDownload}
             >
-              下載模型 ({selectedModel})
+              下載 AI 語音辨識模型 (約 480MB)
             </button>
           )
         ) : (
