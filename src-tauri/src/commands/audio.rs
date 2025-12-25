@@ -139,12 +139,10 @@ pub async fn start_recording(
                 if msg.contains("size=") && !is_ready {
                     is_ready = true;
 
-                    // Optional: start sound
-                    thread::spawn(|| {
-                        let _ = Command::new("afplay")
-                            .arg("/System/Library/Sounds/Tink.aiff")
-                            .output();
-                    });
+    // Optional: start sound
+    // let _ = Command::new("afplay")
+    //     .arg("/System/Library/Sounds/Tink.aiff")
+    //     .spawn();
 
                     let _ = app_clone.emit("recording-ready", "ready");
                 }
