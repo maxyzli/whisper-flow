@@ -44,7 +44,7 @@ export function SettingsCard({
 }: SettingsCardProps) {
   return (
     <section className="card settings-card">
-      {/* 第一排：語言 & 快捷鍵 (調整版面) */}
+      {/* 第一排：語言 & 快捷鍵 */}
       <div className="grid-row">
         <div className="input-group">
           <label>辨識語言</label>
@@ -61,20 +61,19 @@ export function SettingsCard({
             ))}
           </select>
         </div>
-      </div>
 
-      {/* 第二排：快捷鍵 */}
-      <div className="input-group" style={{ marginTop: "12px" }}>
-        <label>快捷鍵</label>
-        <button
-          className={`shortcut-btn ${isRecordingShortcut ? "active" : ""}`}
-          onClick={() => setIsRecordingShortcut(true)}
-          disabled={isRecording || isStarting}
-        >
-          {isRecordingShortcut
-            ? "按下按鍵..."
-            : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
-        </button>
+        <div className="input-group">
+          <label>快捷鍵</label>
+          <button
+            className={`shortcut-btn ${isRecordingShortcut ? "active" : ""}`}
+            onClick={() => setIsRecordingShortcut(true)}
+            disabled={isRecording || isStarting}
+          >
+            {isRecordingShortcut
+              ? "按下按鍵..."
+              : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
+          </button>
+        </div>
       </div>
 
       {/* 第三排：檔案匯入設定 (時間戳) */}
