@@ -123,11 +123,9 @@ export function SettingsCard({
 
       {/* Folder Info */}
       <div className="folder-row">
-        <div className="folder-meta">
-          <div className="folder-label">Recordings Folder</div>
-          <div className="folder-path" title={recordingsDir || ""}>
-            {recordingsDir || "讀取中..."}
-          </div>
+        <div className="folder-label">Recordings Folder</div>
+        <div className="folder-path" title={recordingsDir || ""}>
+          {recordingsDir || "讀取中..."}
         </div>
 
         <div className="folder-actions">

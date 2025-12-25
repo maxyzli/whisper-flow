@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, WindowEvent};
 use tauri_plugin_global_shortcut::{Shortcut, ShortcutEvent, ShortcutState};
 
 pub mod commands;
@@ -45,6 +45,8 @@ pub fn run() {
 
             // System commands
             commands::system::check_accessibility_permission,
+            commands::system::prompt_accessibility_permission,
+            commands::system::request_microphone_permission,
             commands::system::update_global_shortcut,
             commands::system::get_recordings_dir_cmd,
             commands::system::open_recordings_dir,

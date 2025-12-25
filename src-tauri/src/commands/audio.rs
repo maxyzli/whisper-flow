@@ -9,20 +9,43 @@ use crate::utils::{new_session_paths, get_model_info, interrupt_and_wait};
 
 #[tauri::command]
 pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>, String> {
-    let output = app
+    // 嘗試執行 ffmpeg 指令
+    let output_result = app
         .shell()
         .sidecar("ffmpeg")
         .map_err(|e| e.to_string())?
         .args(["-f", "avfoundation", "-list_devices", "true", "-i", ""])
         .output()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await;
+
+    // 定義預設設備，以便在失敗時回傳
+    let default_device = AudioDevice {
+        id: "0".into(),
+        name: "Default Microphone".into(),
+    };
+
+    let output = match output_result {
+        Ok(o) => o,
+        Err(e) => {
+            println!("[Warn] Failed to run ffmpeg list_devices: {}", e);
+            return Ok(vec![default_device]);
+        }
+    };
 
     let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // 即使 ffmpeg 回傳 error (因為 -i "" 失敗)，我們仍然嘗試解析 stderr 中的設備列表
+    // 只有當真的解析不出東西時，才當作失敗
+
     let mut devices = Vec::new();
     let mut is_audio_section = false;
 
     for line in stderr.lines() {
+        // 只處理包含 AVFoundation 的行，過濾掉最後的 Error opening input 等錯誤訊息
+        if !line.contains("AVFoundation") {
+            continue;
+        }
+
         if line.contains("AVFoundation audio devices:") {
             is_audio_section = true;
             continue;
@@ -30,9 +53,12 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
         if is_audio_section && line.contains("AVFoundation video devices:") {
             break;
         }
+        
+        // 解析格式如: [AVFoundation indev @ 0x...] [0] MacBook Pro Microphone
         if is_audio_section && line.contains('[') && line.contains(']') {
             let parts: Vec<&str> = line.split(']').collect();
-            if parts.len() >= 2 {
+            // 預期至少有三個部分：[AVFoundation...], [ID], Name
+            if parts.len() >= 3 {
                 let id = parts[parts.len() - 2]
                     .split('[')
                     .last()
@@ -41,7 +67,8 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
                     .to_string();
                 let name = parts.last().unwrap_or(&"").trim().to_string();
 
-                if !id.is_empty() && !name.is_empty() && !name.contains("AVFoundation") {
+                // 再次驗證 ID 是否為數字且名稱不為空
+                if !id.is_empty() && id.chars().all(|c| c.is_numeric()) && !name.is_empty() {
                     devices.push(AudioDevice { id, name });
                 }
             }
@@ -49,10 +76,8 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
     }
 
     if devices.is_empty() {
-        devices.push(AudioDevice {
-            id: "0".into(),
-            name: "Default Microphone".into(),
-        });
+        println!("[Warn] No devices parsed. FFmpeg stderr:\n{}", stderr);
+        devices.push(default_device);
     }
 
     Ok(devices)
@@ -61,7 +86,7 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
 /// Start Recording
 /// Creates a unique session folder per recording and writes raw audio there.
 /// Returns the session_id for tracking.
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn start_recording(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -143,7 +168,7 @@ pub async fn start_recording(
 /// Stop & Transcribe
 /// Stops the active ffmpeg process, converts raw -> wav, runs Whisper, and persists transcript.txt.
 /// Returns transcript text (and session tag).
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn stop_and_transcribe(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -284,7 +309,7 @@ pub async fn stop_and_transcribe(
     Ok(transcript_text)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn transcribe_external_file(
     app: AppHandle,
     file_path: String,

@@ -4,7 +4,7 @@ use tokio::io::AsyncWriteExt;
 use crate::types::{ModelStatus, DownloadProgress};
 use crate::utils::{get_model_info, ensure_dir};
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn check_model_status(app: AppHandle, model_type: String) -> Result<ModelStatus, String> {
     let (model_path, _) = get_model_info(&app, &model_type)?;
     let mut exists = false;
@@ -27,7 +27,7 @@ pub async fn check_model_status(app: AppHandle, model_type: String) -> Result<Mo
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn download_model(app: AppHandle, model_type: String) -> Result<String, String> {
     let (model_path, url) = get_model_info(&app, &model_type)?;
     let model_dir = model_path
