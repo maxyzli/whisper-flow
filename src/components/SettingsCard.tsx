@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { LANGUAGE_OPTIONS, ModelStatus } from "../constants";
 
 interface SettingsCardProps {
