@@ -140,14 +140,6 @@ export function SettingsCard({
           >
             Open
           </button>
-          <button
-            className="btn-secondary small"
-            onClick={() => writeText(recordingsDir)}
-            disabled={!recordingsDir}
-            title="複製路徑"
-          >
-            Copy
-          </button>
         </div>
       </div>
     </section>
