@@ -22,20 +22,8 @@ use tauri_plugin_shell::ShellExt;
 // -----------------------------
 const MODELS: &[(&str, &str)] = &[
     (
-        "tiny",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-    ),
-    (
-        "base",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
-    ),
-    (
         "small",
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
-    ),
-    (
-        "medium",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
     ),
 ];
 
@@ -86,14 +74,22 @@ fn ensure_dir(path: &Path) -> Result<(), String> {
 
 fn get_model_info(app: &AppHandle, model_type: &str) -> Result<(PathBuf, String), String> {
     let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let filename = format!("ggml-{}.bin", model_type);
+    
+    // 如果傳入的 model_type 不在 MODELS 裡面，預設使用 small
+    let target_model = if MODELS.iter().any(|(name, _)| *name == model_type) {
+        model_type
+    } else {
+        "small"
+    };
+
+    let filename = format!("ggml-{}.bin", target_model);
     let model_path = app_dir.join("models").join(&filename);
 
     let url = MODELS
         .iter()
-        .find(|(name, _)| *name == model_type)
+        .find(|(name, _)| *name == target_model)
         .map(|(_, url)| url.to_string())
-        .ok_or_else(|| format!("Unsupported model type: {}", model_type))?;
+        .ok_or_else(|| format!("Unsupported model type: {}", target_model))?;
 
     Ok((model_path, url))
 }

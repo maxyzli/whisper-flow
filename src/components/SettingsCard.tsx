@@ -1,9 +1,8 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { MODEL_OPTIONS, LANGUAGE_OPTIONS, ModelStatus } from "../constants";
+import { LANGUAGE_OPTIONS, ModelStatus } from "../constants";
 
 interface SettingsCardProps {
   selectedModel: string;
-  setSelectedModel: (model: string) => void;
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
   isRecording: boolean;
@@ -25,7 +24,6 @@ interface SettingsCardProps {
 
 export function SettingsCard({
   selectedModel,
-  setSelectedModel,
   selectedLanguage,
   setSelectedLanguage,
   isRecording,
@@ -46,24 +44,8 @@ export function SettingsCard({
 }: SettingsCardProps) {
   return (
     <section className="card settings-card">
-      {/* 第一排：AI 模型 & 語言 */}
+      {/* 第一排：語言 & 快捷鍵 (調整版面) */}
       <div className="grid-row">
-        <div className="input-group">
-          <label>AI 模型</label>
-          <select
-            className="modern-select"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={isRecording || isStarting || isLoading}
-          >
-            {MODEL_OPTIONS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="input-group">
           <label>辨識語言</label>
           <select

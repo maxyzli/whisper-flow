@@ -10,9 +10,7 @@ export function useAppLogic() {
   const [hasPermission, setHasPermission] = useState(true);
 
   // 持久化設定
-  const [selectedModel, setSelectedModel] = useState(
-    () => localStorage.getItem("wf_model") || "small"
-  );
+  const [selectedModel] = useState("small");
   const [selectedLanguage, setSelectedLanguage] = useState(
     () => localStorage.getItem("wf_language") || "zh"
   );
@@ -73,7 +71,6 @@ export function useAppLogic() {
       withTimestamps,
     };
     // 同步儲存到 LocalStorage
-    localStorage.setItem("wf_model", selectedModel);
     localStorage.setItem("wf_language", selectedLanguage);
     localStorage.setItem("wf_device", selectedDevice);
     localStorage.setItem("wf_shortcut", shortcutKey);
@@ -84,7 +81,6 @@ export function useAppLogic() {
     isLoading,
     downloading,
     selectedDevice,
-    selectedModel,
     selectedLanguage,
     shortcutKey,
     withTimestamps,
@@ -128,7 +124,10 @@ export function useAppLogic() {
       });
       setModelStatus(status);
     } catch (e) {
-      console.error(e);
+      console.error("檢查模型狀態失敗:", e);
+      // 如果失敗，給一個預設狀態避免畫面卡死
+      setModelStatus({ exists: false, path: "" });
+      setError(`系統檢查失敗: ${e}`);
     }
   };
 
@@ -384,7 +383,7 @@ export function useAppLogic() {
   return {
     // State
     hasPermission,
-    selectedModel, setSelectedModel,
+    selectedModel,
     selectedLanguage, setSelectedLanguage,
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,

@@ -12,7 +12,7 @@ function App() {
   const {
     // State
     hasPermission,
-    selectedModel, setSelectedModel,
+    selectedModel,
     selectedLanguage, setSelectedLanguage,
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
@@ -57,7 +57,6 @@ function App() {
       {/* 設定區塊 */}
       <SettingsCard
         selectedModel={selectedModel}
-        setSelectedModel={setSelectedModel}
         selectedLanguage={selectedLanguage}
         setSelectedLanguage={setSelectedLanguage}
         isRecording={isRecording}
