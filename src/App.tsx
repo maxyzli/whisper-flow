@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import "./App.css";
 import { useAppLogic } from "./hooks/useAppLogic";
+import { useHintWindowControl } from "./hooks/useHintWindowControl";
 import { PermissionScreen } from "./components/PermissionScreen";
 import { Header } from "./components/Header";
 import { SettingsCard } from "./components/SettingsCard";
@@ -7,8 +9,11 @@ import { ControlCard } from "./components/ControlCard";
 import { ResultSection } from "./components/ResultSection";
 import { DragOverlay } from "./components/DragOverlay";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 function App() {
+  const [windowLabel, setWindowLabel] = useState("");
+
   const {
     // State
     hasPermission,
@@ -35,6 +40,20 @@ function App() {
     openSystemSettings,
     openRecordingsFolder,
   } = useAppLogic();
+
+  // --- 視窗管理 ---
+  useEffect(() => {
+    const win = getCurrentWindow();
+    setWindowLabel(win.label);
+  }, []);
+
+  // 使用 Custom Hook 控制懸浮窗
+  useHintWindowControl({ isRecording, isLoading, windowLabel });
+
+  // App.tsx 不再渲染提示窗內容，因為那是 hint.html 的工作
+  if (windowLabel === "recording-hint") {
+    return null;
+  }
 
   // --- 渲染 UI ---
   if (!hasPermission)

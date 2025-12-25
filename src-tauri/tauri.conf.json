@@ -10,12 +10,29 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
+        "label": "main",
         "title": "Whisper Flow",
         "width": 460,
         "height": 800,
         "resizable": true
+      },
+      {
+        "label": "recording-hint",
+        "title": "Recording Hint",
+        "url": "/hint.html",
+        "width": 300,
+        "height": 80,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "resizable": false,
+        "skipTaskbar": true,
+        "center": false,
+        "shadow": false
       }
     ],
     "security": {

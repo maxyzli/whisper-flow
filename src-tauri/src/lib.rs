@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, WindowEvent};
+use tauri::{AppHandle, Emitter, WindowEvent, Manager};
 use tauri_plugin_global_shortcut::{Shortcut, ShortcutEvent, ShortcutState};
 
 pub mod commands;
@@ -16,6 +16,40 @@ use crate::state::AppState;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let win = app.get_webview_window("recording-hint");
+            if let Some(window) = win {
+                #[cfg(target_os = "macos")]
+                {
+                    use objc2::rc::Retained;
+                    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior, NSColor};
+                    
+                    // 取得底層 NSWindow 指標
+                    let ns_window_ptr = window.ns_window().unwrap() as *mut NSWindow;
+                    
+                    unsafe {
+                        let ns_window = Retained::retain(ns_window_ptr).unwrap();
+                        
+                        // 1. 設定背景透明
+                        ns_window.setBackgroundColor(Some(&NSColor::clearColor()));
+                        
+                        // 2. 設定非不透明
+                        ns_window.setOpaque(false);
+                        
+                        // 3. 移除陰影
+                        ns_window.setHasShadow(false);
+                        
+                        // 4. 設定視窗行為 (使用 objc2-app-kit 的簡短 enum 名稱)
+                        ns_window.setCollectionBehavior(
+                            NSWindowCollectionBehavior::CanJoinAllSpaces
+                            | NSWindowCollectionBehavior::Transient
+                            | NSWindowCollectionBehavior::IgnoresCycle
+                        );
+                    }
+                }
+            }
+            Ok(())
+        })
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent| {
