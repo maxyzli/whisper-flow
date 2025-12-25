@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getAllWindows, LogicalSize, LogicalPosition, currentMonitor } from "@tauri-apps/api/window";
+import { getAllWindows, LogicalSize, LogicalPosition, currentMonitor, primaryMonitor } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 
 interface UseHintWindowControlProps {
@@ -14,6 +14,8 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel }: Us
     // 只有主視窗負責控制提示視窗
     if (windowLabel !== "main") return;
 
+    let showTimer: ReturnType<typeof setTimeout> | undefined;
+
     // 發送狀態同步事件 (確保 hint 視窗內的 React 狀態更新)
     emit("sync-recording-status", isRecording);
     emit("sync-loading-status", isLoading);
@@ -26,7 +28,11 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel }: Us
         if (!hintWin) return;
 
         if (isRecording || isLoading) {
-          const monitor = await currentMonitor();
+          let monitor = await currentMonitor();
+          if (!monitor) {
+             monitor = await primaryMonitor();
+          }
+
           if (monitor) {
             const { width: screenWidth, height: screenHeight } = monitor.size;
             const scaleFactor = monitor.scaleFactor;
@@ -44,19 +50,30 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel }: Us
             try { await hintWin.setPosition(new LogicalPosition(x, y)); } catch (e) {}
             try { await hintWin.setAlwaysOnTop(true); } catch (e) {}
 
+            // 清除舊的 timer
+            if (showTimer) clearTimeout(showTimer);
+
             // 延遲顯示，確保渲染準備就緒
-            setTimeout(async () => {
+            showTimer = setTimeout(async () => {
+              console.log("Hint Window: Showing...");
               try { await hintWin.setIgnoreCursorEvents(true); } catch (e) {}
               await hintWin.show();
               // 再次同步狀態，防止 hint 視窗剛啟動沒收到
               emit("sync-recording-status", isRecording);
               emit("sync-loading-status", isLoading);
             }, 50);
+          } else {
+             console.error("Hint Window: No monitor found.");
           }
         } else {
+          // 清除 timer，防止在隱藏過程中突然顯示
+          if (showTimer) clearTimeout(showTimer);
+          
+          console.log("Hint Window: Hiding...");
           // 狀態結束，隱藏視窗
           emit("sync-recording-status", false);
           emit("sync-loading-status", false);
+          try { await hintWin.setIgnoreCursorEvents(false); } catch (e) {}
           await hintWin.hide();
         }
       } catch (err) {
@@ -65,5 +82,9 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel }: Us
     };
 
     updateHintWindow();
+
+    return () => {
+      if (showTimer) clearTimeout(showTimer);
+    };
   }, [isRecording, isLoading, windowLabel]);
 }
