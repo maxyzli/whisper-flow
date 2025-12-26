@@ -41,7 +41,7 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel }: Us
             const winHeight = 60;
             // 計算位置：螢幕下方中間偏上 (原本是 -120，改為 -60 讓它更靠下)
             const x = (screenWidth / scaleFactor - winWidth) / 2;
-            const y = screenHeight / scaleFactor - winHeight - 30;
+            const y = screenHeight / scaleFactor - winHeight - 10;
 
             // 逐一嘗試設定，失敗也不要卡死
             try { await hintWin.setDecorations(false); } catch (e) {}
