@@ -487,3 +487,104 @@
 .drag-text { font-size: 1.2rem; font-weight: 700; }
 
 .drag-subtext { font-size: 0.9rem; color: var(--text-sub); }
+/* -----------------------------
+   12) Settings Page Styles
+------------------------------ */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn, .settings-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: background 0.2s;
+}
+
+.back-btn:hover, .settings-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px; /* for scrollbar spacing */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-group {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-group h3 {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  opacity: 0.9;
+}
+
+.helper-text {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.model-status-tag {
+  background: rgba(48, 209, 88, 0.1);
+  color: var(--success);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid rgba(48, 209, 88, 0.2);
+}
+
+.folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.modern-textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  padding: 10px;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modern-textarea:focus {
+  border-color: var(--primary);
+}

@@ -1,11 +1,11 @@
-use tauri::{AppHandle, Emitter, State};
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
-use std::process::Command;
-use std::thread;
 use crate::state::AppState;
 use crate::types::{AudioDevice, RecordingSession};
-use crate::utils::{new_session_paths, get_model_info, interrupt_and_wait};
+use crate::utils::{get_model_info, interrupt_and_wait, new_session_paths};
+use std::process::Command;
+use std::thread;
+use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_shell::process::CommandEvent;
+use tauri_plugin_shell::ShellExt;
 
 #[tauri::command]
 pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>, String> {
@@ -33,7 +33,7 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
     };
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    
+
     // 即使 ffmpeg 回傳 error (因為 -i "" 失敗)，我們仍然嘗試解析 stderr 中的設備列表
     // 只有當真的解析不出東西時，才當作失敗
 
@@ -53,7 +53,7 @@ pub async fn get_audio_devices(app: tauri::AppHandle) -> Result<Vec<AudioDevice>
         if is_audio_section && line.contains("AVFoundation video devices:") {
             break;
         }
-        
+
         // 解析格式如: [AVFoundation indev @ 0x...] [0] MacBook Pro Microphone
         if is_audio_section && line.contains('[') && line.contains(']') {
             let parts: Vec<&str> = line.split(']').collect();
@@ -124,7 +124,9 @@ pub async fn start_recording(
             "1",
             "-f",
             "s16le",
-            raw_path.to_str().ok_or_else(|| "Invalid raw path".to_string())?,
+            raw_path
+                .to_str()
+                .ok_or_else(|| "Invalid raw path".to_string())?,
         ])
         .spawn()
         .map_err(|e| e.to_string())?;
@@ -139,10 +141,10 @@ pub async fn start_recording(
                 if msg.contains("size=") && !is_ready {
                     is_ready = true;
 
-    // Optional: start sound
-    // let _ = Command::new("afplay")
-    //     .arg("/System/Library/Sounds/Tink.aiff")
-    //     .spawn();
+                    // Optional: start sound
+                    // let _ = Command::new("afplay")
+                    //     .arg("/System/Library/Sounds/Tink.aiff")
+                    //     .spawn();
 
                     let _ = app_clone.emit("recording-ready", "ready");
                 }
@@ -172,6 +174,7 @@ pub async fn stop_and_transcribe(
     state: State<'_, AppState>,
     model_type: String,
     language: String,
+    prompt: String,
 ) -> Result<String, String> {
     println!("--- [Debug] Stop requested (Lang: {}) ---", language);
 
@@ -267,7 +270,7 @@ pub async fn stop_and_transcribe(
             &language,
             "-nt", // No timestamps for quick dictation
             "--prompt",
-            "API, Python, SDE, Amazon, 繁體中文, 技術討論, Rust, React, debug",
+            &prompt,
         ])
         .output()
         .await
@@ -314,6 +317,7 @@ pub async fn transcribe_external_file(
     model_type: String,
     language: String,
     with_timestamps: bool,
+    prompt: String,
 ) -> Result<String, String> {
     println!(
         "--- [Debug] Processing external file: {} (Lang: {}, Timestamps: {}) ---",
@@ -365,8 +369,7 @@ pub async fn transcribe_external_file(
         "-l".to_string(),
         language.clone(),
         "--prompt".to_string(),
-        // Kept prompts in mixed language to maintain accuracy for your specific use case
-        "API, Python, SDE, Amazon, 繁體中文, 影片字幕, 逐字稿".to_string(),
+        prompt.clone(),
     ];
 
     // Toggle between timestamps (SRT) and plain text

@@ -13,6 +13,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 function App() {
   const [windowLabel, setWindowLabel] = useState("");
+  const [currentView, setCurrentView] = useState<"recorder" | "settings">("recorder");
 
   const {
     // State
@@ -21,6 +22,7 @@ function App() {
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
     withTimestamps, setWithTimestamps,
+    customPrompt, setCustomPrompt,
     modelStatus,
     devices, fetchDevices,
     isDragging,
@@ -32,7 +34,7 @@ function App() {
     transcription,
     error,
     recordingsDir,
-    
+
     // Actions
     handleToggleLogic,
     handleImportFile,
@@ -50,7 +52,6 @@ function App() {
   // 使用 Custom Hook 控制懸浮窗
   useHintWindowControl({ isRecording, isLoading, windowLabel });
 
-  // App.tsx 不再渲染提示窗內容，因為那是 hint.html 的工作
   if (windowLabel === "recording-hint") {
     return null;
   }
@@ -70,45 +71,55 @@ function App() {
 
   return (
     <main className="container">
-      <Header isRecording={isRecording} isLoading={isLoading} />
-
-      {/* 設定區塊 */}
-      <SettingsCard
-        selectedLanguage={selectedLanguage}
-        setSelectedLanguage={setSelectedLanguage}
+      <Header
         isRecording={isRecording}
-        isStarting={isStarting}
         isLoading={isLoading}
-        shortcutKey={shortcutKey}
-        isRecordingShortcut={isRecordingShortcut}
-        setIsRecordingShortcut={setIsRecordingShortcut}
-        withTimestamps={withTimestamps}
-        setWithTimestamps={setWithTimestamps}
-        modelStatus={modelStatus}
-        downloading={downloading}
-        downloadProgress={downloadProgress}
-        handleDownload={handleDownload}
-        handleImportFile={handleImportFile}
-        recordingsDir={recordingsDir}
-        openRecordingsFolder={openRecordingsFolder}
+        view={currentView}
+        onToggleSettings={() => setCurrentView(v => v === "recorder" ? "settings" : "recorder")}
       />
 
-      {/* 錄音控制區 (僅在模型存在時顯示) */}
-      {modelStatus.exists && (
-        <ControlCard
+      {currentView === "settings" ? (
+        <SettingsCard
           devices={devices}
           selectedDevice={selectedDevice}
           setSelectedDevice={setSelectedDevice}
           fetchDevices={fetchDevices}
+          selectedLanguage={selectedLanguage}
+          setSelectedLanguage={setSelectedLanguage}
           isRecording={isRecording}
-          isLoading={isLoading}
           isStarting={isStarting}
-          handleToggleLogic={handleToggleLogic}
+          isLoading={isLoading}
+          shortcutKey={shortcutKey}
+          isRecordingShortcut={isRecordingShortcut}
+          setIsRecordingShortcut={setIsRecordingShortcut}
+          withTimestamps={withTimestamps}
+          setWithTimestamps={setWithTimestamps}
+          customPrompt={customPrompt}
+          setCustomPrompt={setCustomPrompt}
+          modelStatus={modelStatus}
+          downloading={downloading}
+          downloadProgress={downloadProgress}
+          handleDownload={handleDownload}
+          handleImportFile={handleImportFile}
+          recordingsDir={recordingsDir}
+          openRecordingsFolder={openRecordingsFolder}
         />
-      )}
+      ) : (
+        <>
+          {/* 錄音控制區 (僅在模型存在時顯示) */}
+          {modelStatus.exists && (
+            <ControlCard
+              isRecording={isRecording}
+              isLoading={isLoading}
+              isStarting={isStarting}
+              handleToggleLogic={handleToggleLogic}
+            />
+          )}
 
-      {/* 結果顯示區 */}
-      <ResultSection transcription={transcription} />
+          {/* 結果顯示區 */}
+          <ResultSection transcription={transcription} />
+        </>
+      )}
 
       {error && <div className="error-toast">{error}</div>}
 

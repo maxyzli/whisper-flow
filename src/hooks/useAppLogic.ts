@@ -10,9 +10,9 @@ export function useAppLogic() {
   const [hasPermission, setHasPermission] = useState(true);
 
   // 持久化設定
-  const [selectedModel] = useState("small");
+  const [selectedModel] = useState("medium");
   const [selectedLanguage, setSelectedLanguage] = useState(
-    () => localStorage.getItem("wf_language") || "zh"
+    () => localStorage.getItem("wf_language") || "auto"
   );
   const [selectedDevice, setSelectedDevice] = useState(
     () => localStorage.getItem("wf_device") || "0"
@@ -23,6 +23,9 @@ export function useAppLogic() {
   // 新增：是否包含時間戳 (SRT)
   const [withTimestamps, setWithTimestamps] = useState(
     () => localStorage.getItem("wf_timestamps") === "true"
+  );
+  const [customPrompt, setCustomPrompt] = useState(
+    () => localStorage.getItem("wf_custom_prompt") || "技術術語：API, Rust, React, Python, SDE, Amazon, Google, Debug, Implementation, Frontend, Backend. 語言風：中英混雜、技術語言、繁體中文。"
   );
 
   // UI 狀態
@@ -56,6 +59,7 @@ export function useAppLogic() {
     selectedModel,
     selectedLanguage,
     withTimestamps, // 加入 Ref 同步
+    customPrompt,
   });
 
   // --- 1. 狀態同步 (Ref Pattern) ---
@@ -69,12 +73,14 @@ export function useAppLogic() {
       selectedModel,
       selectedLanguage,
       withTimestamps,
+      customPrompt,
     };
     // 同步儲存到 LocalStorage
     localStorage.setItem("wf_language", selectedLanguage);
     localStorage.setItem("wf_device", selectedDevice);
     localStorage.setItem("wf_shortcut", shortcutKey);
     localStorage.setItem("wf_timestamps", String(withTimestamps));
+    localStorage.setItem("wf_custom_prompt", customPrompt);
   }, [
     isRecording,
     isStarting,
@@ -84,6 +90,7 @@ export function useAppLogic() {
     selectedLanguage,
     shortcutKey,
     withTimestamps,
+    customPrompt,
   ]);
 
   // --- 輔助功能定義 (需要在 init 之前定義，或 hoisting) ---
@@ -136,7 +143,7 @@ export function useAppLogic() {
     let unlistenShortcut: (() => void) | undefined;
     let unlistenDownload: (() => void) | undefined;
     let unlistenReady: (() => void) | undefined;
-    
+
     // Drag events
     let unlistenDragEnter: (() => void) | undefined;
     let unlistenDragLeave: (() => void) | undefined;
@@ -279,6 +286,7 @@ export function useAppLogic() {
         const result = await invoke<string>("stop_and_transcribe", {
           modelType: current.selectedModel,
           language: current.selectedLanguage,
+          prompt: current.customPrompt,
         });
         setTranscription(result);
         await writeText(result); // 自動複製
@@ -294,7 +302,7 @@ export function useAppLogic() {
 
   const handleFileProcess = async (filePath: string) => {
     const current = stateRef.current;
-    
+
     // 檢查系統狀態
     if (current.isRecording || current.isStarting || current.isLoading) {
       setError("系統忙碌中，請稍後再試");
@@ -321,6 +329,7 @@ export function useAppLogic() {
         modelType: current.selectedModel,
         language: current.selectedLanguage,
         withTimestamps: current.withTimestamps, // 🔥 傳遞時間戳設定
+        prompt: current.customPrompt,
       });
 
       setTranscription(result);
@@ -365,11 +374,11 @@ export function useAppLogic() {
   };
 
   const openSystemSettings = async () => {
-      try {
-          await invoke("open_accessibility_settings");
-      } catch (e) {
-          console.error("無法打開系統設定:", e);
-      }
+    try {
+      await invoke("open_accessibility_settings");
+    } catch (e) {
+      console.error("無法打開系統設定:", e);
+    }
   };
 
   const openRecordingsFolder = async () => {
@@ -388,6 +397,7 @@ export function useAppLogic() {
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
     withTimestamps, setWithTimestamps,
+    customPrompt, setCustomPrompt,
     modelStatus,
     devices, fetchDevices,
     isDragging, setIsDragging,
@@ -399,7 +409,7 @@ export function useAppLogic() {
     transcription, setTranscription,
     error, setError,
     recordingsDir,
-    
+
     // Actions
     handleToggleLogic,
     handleImportFile,

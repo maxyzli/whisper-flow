@@ -12,43 +12,16 @@ interface ControlCardProps {
 }
 
 export function ControlCard({
-  devices,
-  selectedDevice,
-  setSelectedDevice,
-  fetchDevices,
   isRecording,
   isLoading,
   isStarting,
   handleToggleLogic,
-}: ControlCardProps) {
+}: Omit<ControlCardProps, "devices" | "selectedDevice" | "setSelectedDevice" | "fetchDevices">) {
   return (
-    <section className="card control-card">
-      <div className="device-select-row">
-        <select
-          className="modern-select transparent"
-          value={selectedDevice}
-          onChange={(e) => setSelectedDevice(e.target.value)}
-          disabled={isRecording}
-        >
-          {devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              🎤 {d.name}
-            </option>
-          ))}
-        </select>
-        <button
-          className="icon-btn"
-          onClick={fetchDevices}
-          title="重新整理設備"
-        >
-          ↻
-        </button>
-      </div>
-
+    <section className="card control-card minimalist">
       <button
-        className={`record-main-btn ${isRecording ? "recording" : ""} ${
-          isLoading ? "loading" : ""
-        }`}
+        className={`record-main-btn ${isRecording ? "recording" : ""} ${isLoading ? "loading" : ""
+          }`}
         onClick={handleToggleLogic}
         disabled={isStarting || isLoading}
       >
@@ -57,10 +30,10 @@ export function ControlCard({
           {isLoading
             ? "轉錄中..."
             : isStarting
-            ? "啟動中..."
-            : isRecording
-            ? "停止錄音"
-            : "開始錄音"}
+              ? "啟動中..."
+              : isRecording
+                ? "停止錄音"
+                : "開始錄音"}
         </span>
       </button>
     </section>

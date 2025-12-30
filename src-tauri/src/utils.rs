@@ -1,8 +1,8 @@
+use crate::consts::MODELS;
+use chrono::Local;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{AppHandle, Manager};
-use chrono::Local;
-use crate::consts::MODELS;
 
 pub fn ensure_dir(path: &Path) -> Result<(), String> {
     if !path.exists() {
@@ -22,12 +22,12 @@ pub fn get_recordings_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 pub fn get_model_info(app: &AppHandle, model_type: &str) -> Result<(PathBuf, String), String> {
     let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    
+
     // 如果傳入的 model_type 不在 MODELS 裡面，預設使用 small
     let target_model = if MODELS.iter().any(|(name, _)| *name == model_type) {
         model_type
     } else {
-        "small"
+        "medium"
     };
 
     let filename = format!("ggml-{}.bin", target_model);
@@ -58,13 +58,7 @@ pub fn new_session_paths(
     let wav_path = session_dir.join("input_16k.wav");
     let transcript_path = session_dir.join("transcript.txt");
 
-    Ok((
-        session_id,
-        session_dir,
-        raw_path,
-        wav_path,
-        transcript_path,
-    ))
+    Ok((session_id, session_dir, raw_path, wav_path, transcript_path))
 }
 
 /// Returns true if a process with pid still exists.
@@ -90,8 +84,6 @@ pub async fn interrupt_and_wait(pid: u32, timeout_ms: u64) {
 
     // As a last resort, if still alive after timeout, try SIGKILL.
     if process_is_alive(pid) {
-        let _ = Command::new("kill")
-            .args(["-9", &pid.to_string()])
-            .output();
+        let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
     }
 }
