@@ -16,7 +16,8 @@ export function ControlCard({
   isLoading,
   isStarting,
   handleToggleLogic,
-}: Omit<ControlCardProps, "devices" | "selectedDevice" | "setSelectedDevice" | "fetchDevices">) {
+  t,
+}: Omit<ControlCardProps, "devices" | "selectedDevice" | "setSelectedDevice" | "fetchDevices"> & { t: any }) {
   return (
     <section className="card control-card minimalist">
       <button
@@ -28,12 +29,12 @@ export function ControlCard({
         <div className="inner-circle"></div>
         <span>
           {isLoading
-            ? "轉錄中..."
+            ? t.btnProcessing
             : isStarting
-              ? "啟動中..."
+              ? t.btnStarting
               : isRecording
-                ? "停止錄音"
-                : "開始錄音"}
+                ? t.btnStop
+                : t.btnStart}
         </span>
       </button>
     </section>

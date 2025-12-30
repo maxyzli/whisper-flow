@@ -3,28 +3,29 @@ interface HeaderProps {
   isLoading: boolean;
   view: "recorder" | "settings";
   onToggleSettings: () => void;
+  t: any;
 }
 
-export function Header({ isRecording, isLoading, view, onToggleSettings }: HeaderProps) {
+export function Header({ isRecording, isLoading, view, onToggleSettings, t }: HeaderProps) {
   return (
     <header className="main-header">
       <div className="header-left">
         {view === "settings" && (
-          <button className="back-btn" onClick={onToggleSettings} title="返回">
+          <button className="back-btn" onClick={onToggleSettings} title={t.backBtn}>
             ←
           </button>
         )}
-        <h1>{view === "settings" ? "設定" : "Whisper Flow"}</h1>
+        <h1>{view === "settings" ? t.headerSettings : t.headerTitle}</h1>
       </div>
 
       <div className="header-right">
         <div className="status-bar">
           {isRecording ? (
-            <span className="tag recording">REC</span>
+            <span className="tag recording">{t.tagRecording}</span>
           ) : isLoading ? (
-            <span className="tag processing">AI 分析中...</span>
+            <span className="tag processing">{t.tagProcessing}</span>
           ) : (
-            <span className="tag idle">就緒</span>
+            <span className="tag idle">{t.tagReady}</span>
           )}
         </div>
 
@@ -32,7 +33,7 @@ export function Header({ isRecording, isLoading, view, onToggleSettings }: Heade
           <button
             className="settings-toggle-btn"
             onClick={onToggleSettings}
-            title="開啟設定"
+            title={t.headerSettings}
           >
             ⚙️
           </button>

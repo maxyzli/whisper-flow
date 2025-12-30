@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ModelStatus, AudioDevice } from "../constants";
+import { UILanguage } from "../i18n";
 
 export function useAppLogic() {
   // --- 狀態定義 ---
@@ -26,6 +27,9 @@ export function useAppLogic() {
   );
   const [customPrompt, setCustomPrompt] = useState(
     () => localStorage.getItem("wf_custom_prompt") || "技術術語：API, Rust, React, Python, SDE, Amazon, Google, Debug, Implementation, Frontend, Backend. 語言風：中英混雜、技術語言、繁體中文。"
+  );
+  const [uiLanguage, setUiLanguage] = useState<UILanguage>(
+    () => (localStorage.getItem("wf_ui_language") as UILanguage) || "zh"
   );
 
   // UI 狀態
@@ -60,6 +64,7 @@ export function useAppLogic() {
     selectedLanguage,
     withTimestamps, // 加入 Ref 同步
     customPrompt,
+    uiLanguage,
   });
 
   // --- 1. 狀態同步 (Ref Pattern) ---
@@ -74,6 +79,7 @@ export function useAppLogic() {
       selectedLanguage,
       withTimestamps,
       customPrompt,
+      uiLanguage,
     };
     // 同步儲存到 LocalStorage
     localStorage.setItem("wf_language", selectedLanguage);
@@ -81,6 +87,7 @@ export function useAppLogic() {
     localStorage.setItem("wf_shortcut", shortcutKey);
     localStorage.setItem("wf_timestamps", String(withTimestamps));
     localStorage.setItem("wf_custom_prompt", customPrompt);
+    localStorage.setItem("wf_ui_language", uiLanguage);
   }, [
     isRecording,
     isStarting,
@@ -91,6 +98,7 @@ export function useAppLogic() {
     shortcutKey,
     withTimestamps,
     customPrompt,
+    uiLanguage,
   ]);
 
   // --- 輔助功能定義 (需要在 init 之前定義，或 hoisting) ---
@@ -398,6 +406,7 @@ export function useAppLogic() {
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
     withTimestamps, setWithTimestamps,
     customPrompt, setCustomPrompt,
+    uiLanguage, setUiLanguage,
     modelStatus,
     devices, fetchDevices,
     isDragging, setIsDragging,

@@ -10,6 +10,7 @@ import { ResultSection } from "./components/ResultSection";
 import { DragOverlay } from "./components/DragOverlay";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { translations } from "./i18n";
 
 function App() {
   const [windowLabel, setWindowLabel] = useState("");
@@ -23,6 +24,7 @@ function App() {
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
     withTimestamps, setWithTimestamps,
     customPrompt, setCustomPrompt,
+    uiLanguage, setUiLanguage,
     modelStatus,
     devices, fetchDevices,
     isDragging,
@@ -56,6 +58,8 @@ function App() {
     return null;
   }
 
+  const t = translations[uiLanguage];
+
   // --- 渲染 UI ---
   if (!hasPermission)
     return (
@@ -67,7 +71,7 @@ function App() {
     );
 
   if (!modelStatus)
-    return <div className="loading-screen">初始化系統中...</div>;
+    return <div className="loading-screen">{uiLanguage === 'zh' ? '初始化系統中...' : 'Initializing...'}</div>;
 
   return (
     <main className="container">
@@ -76,6 +80,7 @@ function App() {
         isLoading={isLoading}
         view={currentView}
         onToggleSettings={() => setCurrentView(v => v === "recorder" ? "settings" : "recorder")}
+        t={t}
       />
 
       {currentView === "settings" ? (
@@ -86,6 +91,8 @@ function App() {
           fetchDevices={fetchDevices}
           selectedLanguage={selectedLanguage}
           setSelectedLanguage={setSelectedLanguage}
+          uiLanguage={uiLanguage}
+          setUiLanguage={setUiLanguage}
           isRecording={isRecording}
           isStarting={isStarting}
           isLoading={isLoading}
@@ -103,6 +110,7 @@ function App() {
           handleImportFile={handleImportFile}
           recordingsDir={recordingsDir}
           openRecordingsFolder={openRecordingsFolder}
+          t={t}
         />
       ) : (
         <>
@@ -113,11 +121,12 @@ function App() {
               isLoading={isLoading}
               isStarting={isStarting}
               handleToggleLogic={handleToggleLogic}
+              t={t}
             />
           )}
 
           {/* 結果顯示區 */}
-          <ResultSection transcription={transcription} />
+          <ResultSection transcription={transcription} t={t} />
         </>
       )}
 
@@ -125,11 +134,11 @@ function App() {
 
       {/* 錄製快捷鍵時的遮罩 */}
       {isRecordingShortcut && (
-        <ShortcutOverlay onClose={() => setIsRecordingShortcut(false)} />
+        <ShortcutOverlay onClose={() => setIsRecordingShortcut(false)} t={t} />
       )}
 
       {/* 拖拽檔案時的遮罩 */}
-      {isDragging && <DragOverlay withTimestamps={withTimestamps} />}
+      {isDragging && <DragOverlay withTimestamps={withTimestamps} t={t} />}
     </main>
   );
 }

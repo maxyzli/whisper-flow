@@ -1,4 +1,5 @@
-import { LANGUAGE_OPTIONS, ModelStatus, AudioDevice } from "../constants";
+import { ModelStatus, AudioDevice } from "../constants";
+import { UILanguage } from "../i18n";
 
 interface SettingsCardProps {
   // Audio Devices
@@ -9,6 +10,8 @@ interface SettingsCardProps {
 
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
+  uiLanguage: UILanguage;
+  setUiLanguage: (lang: UILanguage) => void;
   isRecording: boolean;
   isStarting: boolean;
   isLoading: boolean;
@@ -26,6 +29,7 @@ interface SettingsCardProps {
   handleImportFile: () => void;
   recordingsDir: string;
   openRecordingsFolder: () => void;
+  t: any;
 }
 
 export function SettingsCard({
@@ -35,6 +39,8 @@ export function SettingsCard({
   fetchDevices,
   selectedLanguage,
   setSelectedLanguage,
+  uiLanguage,
+  setUiLanguage,
   isRecording,
   isStarting,
   isLoading,
@@ -52,14 +58,15 @@ export function SettingsCard({
   handleImportFile,
   recordingsDir,
   openRecordingsFolder,
+  t,
 }: SettingsCardProps) {
   return (
     <section className="settings-page-content">
       {/* 1. 錄音設定 */}
       <div className="settings-group">
-        <h3>🎙️ 錄音設定</h3>
+        <h3>{t.groupRecording}</h3>
         <div className="input-group">
-          <label>輸入設備</label>
+          <label>{t.labelDevice}</label>
           <div className="device-select-row">
             <select
               className="modern-select"
@@ -76,7 +83,7 @@ export function SettingsCard({
             <button
               className="icon-btn"
               onClick={fetchDevices}
-              title="重新整理設備"
+              title="Refresh"
             >
               ↻
             </button>
@@ -85,30 +92,28 @@ export function SettingsCard({
 
         <div className="grid-row">
           <div className="input-group">
-            <label>辨識語言</label>
+            <label>{t.labelLanguage}</label>
             <select
               className="modern-select"
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
               disabled={isRecording || isStarting || isLoading}
             >
-              {LANGUAGE_OPTIONS.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
+              <option value="auto">{t.langAuto}</option>
+              <option value="zh">{t.langZh}</option>
+              <option value="en">{t.langEn}</option>
             </select>
           </div>
 
           <div className="input-group">
-            <label>快捷鍵</label>
+            <label>{t.labelShortcut}</label>
             <button
               className={`shortcut-btn ${isRecordingShortcut ? "active" : ""}`}
               onClick={() => setIsRecordingShortcut(true)}
               disabled={isRecording || isStarting}
             >
               {isRecordingShortcut
-                ? "按下按鍵..."
+                ? t.btnShortcutActive
                 : shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
             </button>
           </div>
@@ -117,20 +122,20 @@ export function SettingsCard({
 
       {/* 2. AI 模型與提示詞 */}
       <div className="settings-group">
-        <h3>🧠 AI 模型與上下文</h3>
+        <h3>{t.groupModel}</h3>
 
         <div className="input-group">
-          <label>自定義提示詞 (提高專有名詞辨識率)</label>
+          <label>{t.labelCustomPrompt}</label>
           <textarea
             className="modern-textarea"
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            placeholder="例如：術語：API, Rust, React. 語言：中英混雜。"
+            placeholder={t.placeholderPrompt}
             disabled={isRecording || isStarting || isLoading}
             style={{ minHeight: "80px" }}
           />
           <p className="helper-text">
-            在此輸入你常用的專有名詞，Whisper 會優先參考這些詞彙。
+            {t.helperPrompt}
           </p>
         </div>
 
@@ -153,26 +158,26 @@ export function SettingsCard({
               className="btn-primary full-width"
               onClick={handleDownload}
             >
-              下載 AI 語音辨識模型 (約 1.5GB)
+              {t.btnDownloadModel}
             </button>
           )
         ) : (
           <div className="model-status-tag">
-            <span>✅ 已安裝 Medium 模型</span>
+            <span>{t.statusModelInstalled}</span>
           </div>
         )}
       </div>
 
       {/* 3. 檔案與匯出 */}
       <div className="settings-group">
-        <h3>📂 檔案與匯入</h3>
+        <h3>{t.groupFile}</h3>
         <button
           className="btn-secondary full-width"
           onClick={handleImportFile}
           disabled={isRecording || isStarting || isLoading}
           style={{ marginBottom: "12px" }}
         >
-          📂 匯入 影片/音訊 轉文字
+          {t.btnImport}
         </button>
 
         <label className="checkbox-label">
@@ -183,21 +188,37 @@ export function SettingsCard({
             disabled={isRecording || isStarting || isLoading}
           />
           <span className="checkmark"></span>
-          匯入檔案時包含時間戳 (SRT 字幕格式)
+          {t.labelTimestamps}
         </label>
 
         <div className="folder-row" style={{ marginTop: "16px" }}>
           <div className="folder-info">
-            <span className="folder-label">錄音存檔目錄</span>
-            <span className="folder-path">{recordingsDir || "讀取中..."}</span>
+            <span className="folder-label">{t.labelFolder}</span>
+            <span className="folder-path">{recordingsDir || "..."}</span>
           </div>
           <button
             className="btn-secondary small"
             onClick={openRecordingsFolder}
             disabled={!recordingsDir}
           >
-            開啟 Finder
+            {t.btnOpenFolder}
           </button>
+        </div>
+      </div>
+
+      {/* 4. 介面設定 */}
+      <div className="settings-group">
+        <h3>🌐 {t.labelInterfaceLang}</h3>
+        <div className="input-group">
+          <select
+            className="modern-select"
+            value={uiLanguage}
+            onChange={(e) => setUiLanguage(e.target.value as UILanguage)}
+          >
+            <option value="en">English</option>
+            <option value="zh">繁體中文</option>
+            <option value="zh_cn">简体中文</option>
+          </select>
         </div>
       </div>
     </section>

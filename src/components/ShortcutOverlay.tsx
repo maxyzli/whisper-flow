@@ -1,11 +1,12 @@
 interface ShortcutOverlayProps {
-    onClose: () => void;
+  onClose: () => void;
+  t: any;
 }
 
-export function ShortcutOverlay({ onClose }: ShortcutOverlayProps) {
+export function ShortcutOverlay({ onClose, t }: ShortcutOverlayProps) {
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="overlay-msg">請按下新的組合鍵...</div>
+      <div className="overlay-msg">{t.shortcutOverlayMsg}</div>
     </div>
   );
 }

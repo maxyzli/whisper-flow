@@ -2,22 +2,23 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 interface ResultSectionProps {
   transcription: string;
+  t: any;
 }
 
-export function ResultSection({ transcription }: ResultSectionProps) {
+export function ResultSection({ transcription, t }: ResultSectionProps) {
   return (
     <section className="result-section">
       <div className="result-header">
-        <label>轉錄結果</label>
+        <label>{t.resultTitle}</label>
         <button className="copy-btn" onClick={() => writeText(transcription)}>
-          複製
+          {t.copyBtn}
         </button>
       </div>
       <textarea
         className="transcript-box"
         value={transcription}
         readOnly
-        placeholder="等待錄音 或 拖入檔案..."
+        placeholder={t.resultPlaceholder}
       />
     </section>
   );
