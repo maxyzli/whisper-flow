@@ -54,6 +54,7 @@ export function useAppLogic() {
 
   // Refs (用於解決 Event Listener 閉包陷阱)
   const recordStartTime = useRef<number>(0);
+  const isProcessingRef = useRef(false); // 原子鎖：防止快捷鍵連發產生的競態條件
   const stateRef = useRef({
     isRecording,
     isStarting,
@@ -264,47 +265,73 @@ export function useAppLogic() {
 
   // --- 核心邏輯 ---
   const handleToggleLogic = async () => {
-    const current = stateRef.current;
+    // 1. 原子鎖：防止極短時間內的重複觸發 (例如快捷鍵連發)
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    if (current.isLoading || current.downloading || current.isStarting) return;
+    try {
+      const current = stateRef.current;
 
-    if (!current.isRecording) {
-      // ---> 開始錄音
-      setError(null);
-      setTranscription("");
-      setIsStarting(true);
-      try {
-        await invoke("start_recording", { deviceId: current.selectedDevice });
-      } catch (err) {
-        setIsStarting(false);
-        if (err !== "Already Recording") setError(`啟動失敗: ${err}`);
-      }
-    } else {
-      // ---> 停止並轉錄
-      const duration = Date.now() - recordStartTime.current;
-      if (duration < 500) {
-        console.warn("錄音過短，忽略");
+      // 如果系統正在轉錄或下載模型，則直接忽略任何動作
+      if (current.isLoading || current.downloading) {
         return;
       }
 
-      setIsRecording(false);
-      setIsLoading(true);
+      if (!current.isRecording) {
+        // ---> 嘗試開始錄制
+        // 如果已經在啟動中，則不重複操作
+        if (current.isStarting) return;
 
-      try {
-        const result = await invoke<string>("stop_and_transcribe", {
-          modelType: current.selectedModel,
-          language: current.selectedLanguage,
-          prompt: current.customPrompt,
-        });
-        setTranscription(result);
-        await writeText(result); // 自動複製
-      } catch (err) {
-        if (!String(err).includes("No active recording session")) {
-          setError(`轉錄錯誤: ${err}`);
+        setError(null);
+        setTranscription("");
+
+        // 立即更新狀態與 Ref，不等待 React 的異步渲染
+        setIsStarting(true);
+        stateRef.current.isStarting = true;
+
+        try {
+          await invoke("start_recording", { deviceId: current.selectedDevice });
+        } catch (err) {
+          setIsStarting(false);
+          stateRef.current.isStarting = false;
+          if (err !== "Already Recording") setError(`啟動失敗: ${err}`);
         }
-      } finally {
-        setIsLoading(false);
+      } else {
+        // ---> 嘗試停止錄制
+        const duration = Date.now() - recordStartTime.current;
+        if (duration < 500) {
+          console.warn("錄音過短，忽略");
+          return;
+        }
+
+        // 立即標記為非錄音中 & 轉錄中，並更新 Ref 防止重複觸發
+        setIsRecording(false);
+        stateRef.current.isRecording = false;
+        setIsLoading(true);
+        stateRef.current.isLoading = true;
+
+        try {
+          const result = await invoke<string>("stop_and_transcribe", {
+            modelType: current.selectedModel,
+            language: current.selectedLanguage,
+            prompt: current.customPrompt,
+          });
+          setTranscription(result);
+          await writeText(result);
+        } catch (err) {
+          if (!String(err).includes("No active recording session")) {
+            setError(`轉錄錯誤: ${err}`);
+          }
+        } finally {
+          setIsLoading(false);
+          stateRef.current.isLoading = false;
+        }
       }
+    } finally {
+      // 延遲一段時間釋放「進入鎖」，確保系統狀態已充分轉換
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, 300);
     }
   };
 

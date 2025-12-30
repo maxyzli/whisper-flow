@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, WindowEvent, Manager};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Shortcut, ShortcutEvent, ShortcutState};
 
 pub mod commands;
@@ -22,28 +22,28 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 {
                     use objc2::rc::Retained;
-                    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior, NSColor};
-                    
+                    use objc2_app_kit::{NSColor, NSWindow, NSWindowCollectionBehavior};
+
                     // 取得底層 NSWindow 指標
                     let ns_window_ptr = window.ns_window().unwrap() as *mut NSWindow;
-                    
+
                     unsafe {
                         let ns_window = Retained::retain(ns_window_ptr).unwrap();
-                        
+
                         // 1. 設定背景透明
                         ns_window.setBackgroundColor(Some(&NSColor::clearColor()));
-                        
+
                         // 2. 設定非不透明
                         ns_window.setOpaque(false);
-                        
+
                         // 3. 移除陰影
                         ns_window.setHasShadow(false);
-                        
+
                         // 4. 設定視窗行為 (使用 objc2-app-kit 的簡短 enum 名稱)
                         ns_window.setCollectionBehavior(
                             NSWindowCollectionBehavior::CanJoinAllSpaces
-                            | NSWindowCollectionBehavior::Transient
-                            | NSWindowCollectionBehavior::IgnoresCycle
+                                | NSWindowCollectionBehavior::Transient
+                                | NSWindowCollectionBehavior::IgnoresCycle,
                         );
                     }
                 }
@@ -52,12 +52,32 @@ pub fn run() {
         })
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent| {
-                    if event.state == ShortcutState::Pressed {
-                        println!("[Rust] Shortcut triggered");
-                        let _ = app.emit("shortcut-event", "toggle-recording");
-                    }
-                })
+                .with_handler(
+                    |app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent| {
+                        if event.state == ShortcutState::Pressed {
+                            use std::sync::{Mutex, OnceLock};
+                            use std::time::{Duration, Instant};
+
+                            // 使用靜態變數記錄上次觸發時間，實現後端防抖 (Debounce)
+                            static LAST_TRIGGER: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
+                            let mutex = LAST_TRIGGER.get_or_init(|| Mutex::new(None));
+
+                            let mut last_trigger = mutex.lock().unwrap();
+                            let now = Instant::now();
+
+                            if let Some(last) = *last_trigger {
+                                if now.duration_since(last) < Duration::from_millis(300) {
+                                    println!("[Rust] Shortcut ignored (Debounced)");
+                                    return;
+                                }
+                            }
+
+                            *last_trigger = Some(now);
+                            println!("[Rust] Shortcut triggered");
+                            let _ = app.emit("shortcut-event", "toggle-recording");
+                        }
+                    },
+                )
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
@@ -70,13 +90,11 @@ pub fn run() {
             // Model commands
             commands::model::check_model_status,
             commands::model::download_model,
-            
             // Audio commands
             commands::audio::get_audio_devices,
             commands::audio::start_recording,
             commands::audio::stop_and_transcribe,
             commands::audio::transcribe_external_file,
-
             // System commands
             commands::system::check_accessibility_permission,
             commands::system::prompt_accessibility_permission,
