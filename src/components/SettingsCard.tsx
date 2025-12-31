@@ -10,6 +10,8 @@ interface SettingsCardProps {
 
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
   uiLanguage: UILanguage;
   setUiLanguage: (lang: UILanguage) => void;
   isRecording: boolean;
@@ -39,6 +41,8 @@ export function SettingsCard({
   fetchDevices,
   selectedLanguage,
   setSelectedLanguage,
+  selectedModel,
+  setSelectedModel,
   uiLanguage,
   setUiLanguage,
   isRecording,
@@ -137,6 +141,21 @@ export function SettingsCard({
           <p className="helper-text">
             {t.helperPrompt}
           </p>
+        </div>
+
+        <div className="input-group">
+          <label>{t.labelModel || "AI Model"}</label>
+          <select
+            className="modern-select"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isRecording || isStarting || isLoading}
+          >
+            <option value="small">Small (Fastest)</option>
+            <option value="medium">Medium (Balanced)</option>
+            <option value="large-v3">Large V3 (High Accuracy)</option>
+            <option value="large-v3-turbo">Large V3 Turbo (Fast & Accurate)</option>
+          </select>
         </div>
 
         {!modelStatus.exists ? (

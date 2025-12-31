@@ -19,6 +19,7 @@ function App() {
   const {
     // State
     hasPermission,
+    selectedModel, setSelectedModel,
     selectedLanguage, setSelectedLanguage,
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
@@ -88,9 +89,12 @@ function App() {
           devices={devices}
           selectedDevice={selectedDevice}
           setSelectedDevice={setSelectedDevice}
+
           fetchDevices={fetchDevices}
           selectedLanguage={selectedLanguage}
           setSelectedLanguage={setSelectedLanguage}
+          selectedModel={selectedModel}
+          setSelectedModel={setSelectedModel}
           uiLanguage={uiLanguage}
           setUiLanguage={setUiLanguage}
           isRecording={isRecording}
