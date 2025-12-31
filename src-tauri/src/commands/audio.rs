@@ -117,6 +117,8 @@ pub async fn start_recording(
             "avfoundation",
             "-i",
             &format!(":{}", device_id),
+            "-af",
+            "ebur128=metadata=1",
             "-vn",
             "-ar",
             "16000",
@@ -138,15 +140,28 @@ pub async fn start_recording(
         while let Some(event) = rx.recv().await {
             if let CommandEvent::Stderr(line) = event {
                 let msg = String::from_utf8_lossy(&line);
+
+                // --- 1. Ready Check ---
                 if msg.contains("size=") && !is_ready {
                     is_ready = true;
-
-                    // Optional: start sound
-                    // let _ = Command::new("afplay")
-                    //     .arg("/System/Library/Sounds/Tink.aiff")
-                    //     .spawn();
-
                     let _ = app_clone.emit("recording-ready", "ready");
+                }
+
+                // --- 2. Volume Check (from ebur128) ---
+                if let Some(m_pos) = msg.find("M:") {
+                    let rest = &msg[m_pos + 2..];
+                    let end_pos = rest
+                        .find(|c: char| !c.is_numeric() && c != '.' && c != '-')
+                        .unwrap_or(rest.len());
+                    let val_str = rest[..end_pos].trim();
+
+                    if let Ok(lufs) = val_str.parse::<f32>() {
+                        // 超強映射：-70 (靜音) -> -10 (最大)
+                        // 我們讓講話聲 (-35 ~ -20) 在 0.5 ~ 1.2 之間擺動
+                        let normalized = ((lufs + 70.0) / 50.0).clamp(0.0, 1.8);
+                        let _ = app_clone.emit("audio-level", normalized * 1.5);
+                        // 額外加成
+                    }
                 }
             }
         }

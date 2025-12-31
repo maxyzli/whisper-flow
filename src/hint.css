@@ -40,7 +40,7 @@ body,
 }
 
 .hint-pill.recording {
-  padding: 4px 8px;
+  padding: 4px 12px;
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -49,8 +49,8 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 24px;
-  width: 100px;
+  height: 32px;
+  width: 120px;
   overflow: hidden;
 }
 
