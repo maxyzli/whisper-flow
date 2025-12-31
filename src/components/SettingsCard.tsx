@@ -1,4 +1,4 @@
-import { ModelStatus, AudioDevice } from "../constants";
+import { AudioDevice } from "../constants";
 import { UILanguage } from "../i18n";
 
 interface SettingsCardProps {

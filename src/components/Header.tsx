@@ -1,12 +1,10 @@
 interface HeaderProps {
-  isRecording: boolean;
-  isLoading: boolean;
   view: "recorder" | "settings";
   onToggleSettings: () => void;
   t: any;
 }
 
-export function Header({ isRecording, isLoading, view, onToggleSettings, t }: HeaderProps) {
+export function Header({ view, onToggleSettings, t }: HeaderProps) {
   return (
     <header className="main-header">
       <div className="header-left">

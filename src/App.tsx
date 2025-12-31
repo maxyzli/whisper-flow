@@ -91,8 +91,6 @@ function App() {
   return (
     <main className="container">
       <Header
-        isRecording={isRecording}
-        isLoading={isLoading}
         view={currentView}
         onToggleSettings={() => setCurrentView(v => v === "recorder" ? "settings" : "recorder")}
         t={t}
