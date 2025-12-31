@@ -3,7 +3,10 @@
 @import "./styles/animations.css";
 
 /* 關鍵：強制所有的容器都透明 */
-:root, html, body, #root {
+:root,
+html,
+body,
+#root {
   background-color: rgba(0, 0, 0, 0) !important;
   background: transparent !important;
   margin: 0;
@@ -27,11 +30,28 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(30, 30, 30, 0.9);
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(10px);
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hint-pill.recording {
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.waveform-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  width: 100px;
+  overflow: hidden;
 }
 
 .hint-dot {
@@ -43,7 +63,8 @@
 }
 
 .hint-pill.processing .hint-dot {
-  background-color: var(--primary);
+  background-color: var(--accent);
+  animation: pulse 1s infinite alternate;
 }
 
 .hint-text {
