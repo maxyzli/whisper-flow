@@ -156,7 +156,6 @@ export function SettingsCard({
             onChange={(e) => setWithTimestamps(e.target.checked)}
             disabled={isRecording || isStarting || isLoading}
           />
-          <span className="checkmark"></span>
           {t.labelTimestamps}
         </label>
 

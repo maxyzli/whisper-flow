@@ -19,15 +19,7 @@ export function Header({ isRecording, isLoading, view, onToggleSettings, t }: He
       </div>
 
       <div className="header-right">
-        <div className="status-bar">
-          {isRecording ? (
-            <span className="tag recording">{t.tagRecording}</span>
-          ) : isLoading ? (
-            <span className="tag processing">{t.tagProcessing}</span>
-          ) : (
-            <span className="tag idle">{t.tagReady}</span>
-          )}
-        </div>
+
 
         {view === "recorder" && (
           <button

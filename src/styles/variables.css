@@ -1,17 +1,40 @@
 :root {
-  --bg-color: #1e1e1e;
-  --card-bg: #2a2a2a;
-  --input-bg: #333333;
-  --border-color: #444444;
+  /* Base Backgrounds */
+  --bg-color: #121214;
+  /* Deep, rich black-gray */
+  --card-bg: #1c1c1e;
+  /* Slightly lighter for cards */
+  --input-bg: #2c2c2e;
+  /* Distinct input background */
 
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Brand Colors */
   --primary: #0a84ff;
-  --primary-hover: #007aff;
+  /* iOS Blue */
+  --primary-hover: #0077ed;
   --danger: #ff453a;
+  /* iOS Red */
   --success: #32d74b;
+  /* iOS Green */
   --warning: #ff9f0a;
+  /* iOS Orange */
 
+  /* Text */
   --text-main: #ffffff;
-  --text-sub: #a1a1a6;
+  --text-sub: #ebebf599;
+  /* ~60% white */
+  --text-muted: #ebebf54d;
+  /* ~30% white */
 
+  /* Spacing & Radius */
   --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
