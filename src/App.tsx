@@ -9,6 +9,7 @@ import { ControlCard } from "./components/ControlCard";
 import { ResultSection } from "./components/ResultSection";
 import { DragOverlay } from "./components/DragOverlay";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
+import { ModelDownloadScreen } from "./components/ModelDownloadScreen";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { translations } from "./i18n";
 
@@ -19,7 +20,6 @@ function App() {
   const {
     // State
     hasPermission,
-    selectedModel, setSelectedModel,
     selectedLanguage, setSelectedLanguage,
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
@@ -71,9 +71,23 @@ function App() {
       />
     );
 
+  // 1. Loading State
   if (!modelStatus)
     return <div className="loading-screen">{uiLanguage === 'zh' ? '初始化系統中...' : 'Initializing...'}</div>;
 
+  // 2. Blocking Download Screen
+  if (!modelStatus.exists) {
+    return (
+      <ModelDownloadScreen
+        downloadProgress={downloadProgress}
+        downloading={downloading}
+        onDownload={handleDownload}
+        t={t}
+      />
+    )
+  }
+
+  // 3. Main App
   return (
     <main className="container">
       <Header
@@ -93,8 +107,8 @@ function App() {
           fetchDevices={fetchDevices}
           selectedLanguage={selectedLanguage}
           setSelectedLanguage={setSelectedLanguage}
-          selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
+
+
           uiLanguage={uiLanguage}
           setUiLanguage={setUiLanguage}
           isRecording={isRecording}
@@ -107,10 +121,7 @@ function App() {
           setWithTimestamps={setWithTimestamps}
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
-          modelStatus={modelStatus}
-          downloading={downloading}
-          downloadProgress={downloadProgress}
-          handleDownload={handleDownload}
+
           handleImportFile={handleImportFile}
           recordingsDir={recordingsDir}
           openRecordingsFolder={openRecordingsFolder}

@@ -151,18 +151,25 @@ pub async fn start_recording(
 
                 // --- 2. Volume Check (from ebur128) ---
                 if let Some(m_pos) = msg.find("M:") {
-                    let rest = &msg[m_pos + 2..];
-                    let end_pos = rest
-                        .find(|c: char| !c.is_numeric() && c != '.' && c != '-')
-                        .unwrap_or(rest.len());
-                    let val_str = rest[..end_pos].trim();
+                    // Extract the part after "M:"
+                    let after_m = &msg[m_pos + 2..];
 
-                    if let Ok(lufs) = val_str.parse::<f32>() {
-                        // 超強映射：-70 (靜音) -> -10 (最大)
-                        // 我們讓講話聲 (-35 ~ -20) 在 0.5 ~ 1.2 之間擺動
-                        let normalized = ((lufs + 70.0) / 50.0).clamp(0.0, 1.8);
-                        let _ = app_clone.emit("audio-level", normalized * 1.5);
-                        // 額外加成
+                    // Find the start of the number (skip spaces)
+                    if let Some(start_offset) = after_m.find(|c: char| c == '-' || c.is_numeric()) {
+                        let rest = &after_m[start_offset..];
+
+                        // Find the end of the number
+                        let end_pos = rest
+                            .find(|c: char| !c.is_numeric() && c != '.' && c != '-')
+                            .unwrap_or(rest.len());
+
+                        let val_str = &rest[..end_pos];
+
+                        if let Ok(lufs) = val_str.parse::<f32>() {
+                            // Mapping: -70 (Silence) -> -10 (Max)
+                            let normalized = ((lufs + 70.0) / 50.0).clamp(0.0, 1.8);
+                            let _ = app_clone.emit("audio-level", normalized * 1.5);
+                        }
                     }
                 }
             }

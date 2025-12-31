@@ -10,8 +10,6 @@ interface SettingsCardProps {
 
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
-  selectedModel: string;
-  setSelectedModel: (model: string) => void;
   uiLanguage: UILanguage;
   setUiLanguage: (lang: UILanguage) => void;
   isRecording: boolean;
@@ -24,10 +22,6 @@ interface SettingsCardProps {
   setWithTimestamps: (withTimestamps: boolean) => void;
   customPrompt: string;
   setCustomPrompt: (prompt: string) => void;
-  modelStatus: ModelStatus;
-  downloading: boolean;
-  downloadProgress: number;
-  handleDownload: () => void;
   handleImportFile: () => void;
   recordingsDir: string;
   openRecordingsFolder: () => void;
@@ -41,8 +35,6 @@ export function SettingsCard({
   fetchDevices,
   selectedLanguage,
   setSelectedLanguage,
-  selectedModel,
-  setSelectedModel,
   uiLanguage,
   setUiLanguage,
   isRecording,
@@ -55,10 +47,6 @@ export function SettingsCard({
   setWithTimestamps,
   customPrompt,
   setCustomPrompt,
-  modelStatus,
-  downloading,
-  downloadProgress,
-  handleDownload,
   handleImportFile,
   recordingsDir,
   openRecordingsFolder,
@@ -144,47 +132,9 @@ export function SettingsCard({
         </div>
 
         <div className="input-group">
-          <label>{t.labelModel || "AI Model"}</label>
-          <select
-            className="modern-select"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={isRecording || isStarting || isLoading}
-          >
-            <option value="small">Small (Fastest)</option>
-            <option value="medium">Medium (Balanced)</option>
-            <option value="large-v3">Large V3 (High Accuracy)</option>
-            <option value="large-v3-turbo">Large V3 Turbo (Fast & Accurate)</option>
-          </select>
+          {/* Model is fixed to Large V3 Turbo */}
         </div>
 
-        {!modelStatus.exists ? (
-          downloading ? (
-            <div className="download-container full-width">
-              <div className="progress-label">
-                <span>正在初始化 AI 模型...</span>
-                <span>{downloadProgress}%</span>
-              </div>
-              <div className="progress-bar">
-                <div
-                  className="fill"
-                  style={{ width: `${downloadProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          ) : (
-            <button
-              className="btn-primary full-width"
-              onClick={handleDownload}
-            >
-              {t.btnDownloadModel}
-            </button>
-          )
-        ) : (
-          <div className="model-status-tag">
-            <span>{t.statusModelInstalled}</span>
-          </div>
-        )}
       </div>
 
       {/* 3. 檔案與匯出 */}

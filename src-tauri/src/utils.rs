@@ -27,7 +27,7 @@ pub fn get_model_info(app: &AppHandle, model_type: &str) -> Result<(PathBuf, Str
     let target_model = if MODELS.iter().any(|(name, _)| *name == model_type) {
         model_type
     } else {
-        "medium"
+        "large-v3-turbo"
     };
 
     let filename = format!("ggml-{}.bin", target_model);

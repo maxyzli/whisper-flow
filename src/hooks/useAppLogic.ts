@@ -11,9 +11,7 @@ export function useAppLogic() {
   const [hasPermission, setHasPermission] = useState(true);
 
   // 持久化設定
-  const [selectedModel, setSelectedModel] = useState(
-    () => localStorage.getItem("wf_model") || "medium"
-  );
+  const [selectedModel] = useState("large-v3-turbo");
   const [selectedLanguage, setSelectedLanguage] = useState(
     () => localStorage.getItem("wf_language") || "auto"
   );
@@ -85,7 +83,6 @@ export function useAppLogic() {
       uiLanguage,
     };
     // 同步儲存到 LocalStorage
-    localStorage.setItem("wf_model", selectedModel);
     localStorage.setItem("wf_language", selectedLanguage);
     localStorage.setItem("wf_device", selectedDevice);
     localStorage.setItem("wf_shortcut", shortcutKey);
@@ -430,7 +427,7 @@ export function useAppLogic() {
   return {
     // State
     hasPermission,
-    selectedModel, setSelectedModel,
+    selectedModel,
     selectedLanguage, setSelectedLanguage,
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
