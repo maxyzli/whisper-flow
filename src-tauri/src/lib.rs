@@ -102,7 +102,10 @@ pub fn run() {
             commands::system::update_global_shortcut,
             commands::system::get_recordings_dir_cmd,
             commands::system::open_recordings_dir,
-            commands::system::open_accessibility_settings
+            commands::system::open_accessibility_settings,
+            // History commands
+            commands::history::get_history,
+            commands::history::delete_history_item
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

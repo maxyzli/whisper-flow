@@ -13,3 +13,9 @@ export interface AudioDevice {
   id: string;
   name: string;
 }
+
+export interface HistoryItem {
+  id: string;
+  text: string;
+  timestamp: string;
+}

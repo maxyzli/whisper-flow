@@ -16,7 +16,7 @@ export const translations = {
         screenDownloadMsg: "Whisper Flow 需要下載 AI 模型才能運行。這只需要執行一次。",
         screenDownloadBtn: "開始下載 (Large V3 Turbo)",
         screenDownloadNote: "約 1.5GB • 請保持網路連線",
-        labelShortcut: "快捷鍵",
+        labelShortcut: "⌨️ 快捷鍵",
         btnShortcutActive: "按下按鍵...",
         groupModel: "🧠 AI 模型與上下文",
         labelCustomPrompt: "自定義提示詞 (提高專有名詞辨識率)",
@@ -43,6 +43,8 @@ export const translations = {
         langAuto: "自動辨識",
         langZh: "中文",
         langEn: "英文",
+        historyTitle: "歷史紀錄",
+        historyEmpty: "尚無歷史紀錄",
     },
     zh_cn: {
         headerTitle: "Whisper Flow",
@@ -84,6 +86,8 @@ export const translations = {
         langAuto: "自动识别",
         langZh: "中文",
         langEn: "英文",
+        historyTitle: "历史记录",
+        historyEmpty: "尚无历史记录",
     },
     en: {
         headerTitle: "Whisper Flow",
@@ -98,7 +102,7 @@ export const translations = {
         groupRecording: "🎙️ Recording Settings",
         labelDevice: "Input Device",
         labelLanguage: "Recognition Language",
-        labelShortcut: "Global Shortcut",
+        labelShortcut: "💻 Global Shortcut",
         btnShortcutActive: "Press shortcut...",
         groupModel: "🧠 AI Model & Context",
         labelCustomPrompt: "Custom Prompt (Improve vocabulary accuracy)",
@@ -125,6 +129,8 @@ export const translations = {
         langAuto: "Auto",
         langZh: "Chinese",
         langEn: "English",
+        historyTitle: "History",
+        historyEmpty: "No history yet",
     }
 };
 

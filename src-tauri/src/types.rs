@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tauri_plugin_shell::process::CommandChild;
 
 pub struct RecordingSession {
@@ -28,4 +28,11 @@ pub struct DownloadProgress {
 pub struct AudioDevice {
     pub id: String,
     pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct HistoryItem {
+    pub id: String,
+    pub text: String,
+    pub timestamp: String,
 }

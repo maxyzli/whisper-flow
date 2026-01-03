@@ -6,7 +6,7 @@ import { PermissionScreen } from "./components/PermissionScreen";
 import { Header } from "./components/Header";
 import { SettingsCard } from "./components/SettingsCard";
 import { ControlCard } from "./components/ControlCard";
-import { ResultSection } from "./components/ResultSection";
+import { HistorySection } from "./components/HistorySection";
 import { DragOverlay } from "./components/DragOverlay";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { ModelDownloadScreen } from "./components/ModelDownloadScreen";
@@ -34,9 +34,10 @@ function App() {
     isLoading,
     downloading,
     downloadProgress,
-    transcription,
     error,
     recordingsDir,
+    history,
+    deleteHistoryItem,
 
     // Actions
     handleToggleLogic,
@@ -120,7 +121,6 @@ function App() {
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
 
-          handleImportFile={handleImportFile}
           recordingsDir={recordingsDir}
           openRecordingsFolder={openRecordingsFolder}
           t={t}
@@ -129,17 +129,30 @@ function App() {
         <>
           {/* 錄音控制區 (僅在模型存在時顯示) */}
           {modelStatus.exists && (
-            <ControlCard
-              isRecording={isRecording}
-              isLoading={isLoading}
-              isStarting={isStarting}
-              handleToggleLogic={handleToggleLogic}
-              t={t}
-            />
+            <div className="home-controls">
+              <ControlCard
+                isRecording={isRecording}
+                isLoading={isLoading}
+                isStarting={isStarting}
+                handleToggleLogic={handleToggleLogic}
+                t={t}
+              />
+              <button
+                className="btn-secondary full-width"
+                onClick={handleImportFile}
+                disabled={isRecording || isStarting || isLoading}
+              >
+                {t.btnImport}
+              </button>
+            </div>
           )}
 
-          {/* 結果顯示區 */}
-          <ResultSection transcription={transcription} t={t} />
+          {/* 歷史紀錄區 */}
+          <HistorySection
+            history={history}
+            onDelete={deleteHistoryItem}
+            t={t}
+          />
         </>
       )}
 

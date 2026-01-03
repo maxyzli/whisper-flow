@@ -341,6 +341,129 @@
 }
 
 /* -----------------------------
+   History Section
+------------------------------ */
+.history-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  margin-top: 8px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.history-header label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+
+.history-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-time {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  font-family: var(--font-mono);
+}
+
+.item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-btn-sm,
+.delete-btn-sm {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.copy-btn-sm:hover {
+  color: var(--primary);
+  background: rgba(10, 132, 255, 0.1);
+}
+
+.delete-btn-sm:hover {
+  color: var(--danger);
+  background: rgba(255, 69, 58, 0.1);
+}
+
+.item-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  /* Truncate if long */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+}
+
+.history-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.home-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* -----------------------------
    Model Download Screen
 ------------------------------ */
 .download-screen-container {

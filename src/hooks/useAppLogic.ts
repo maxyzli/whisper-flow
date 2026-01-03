@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ModelStatus, AudioDevice } from "../constants";
+import { ModelStatus, AudioDevice, HistoryItem } from "../constants";
 import { UILanguage } from "../i18n";
 
 export function useAppLogic() {
@@ -50,6 +50,7 @@ export function useAppLogic() {
 
   // recordings folder path
   const [recordingsDir, setRecordingsDir] = useState<string>("");
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Refs (用於解決 Event Listener 閉包陷阱)
   const recordStartTime = useRef<number>(0);
@@ -146,6 +147,24 @@ export function useAppLogic() {
     }
   };
 
+  const fetchHistory = async () => {
+    try {
+      const list = await invoke<HistoryItem[]>("get_history");
+      setHistory(list);
+    } catch (e) {
+      console.error("Failed to fetch history:", e);
+    }
+  };
+
+  const deleteHistoryItem = async (id: string) => {
+    try {
+      await invoke("delete_history_item", { id });
+      await fetchHistory();
+    } catch (e) {
+      setError(`刪除失敗: ${e}`);
+    }
+  };
+
   // --- 2. 初始化與事件監聽 ---
   useEffect(() => {
     let unlistenShortcut: (() => void) | undefined;
@@ -172,6 +191,9 @@ export function useAppLogic() {
       } catch (e) {
         console.error("Failed to get recordings dir:", e);
       }
+
+      // 取得歷史紀錄
+      fetchHistory();
 
       // 監聽 Rust 發出的快捷鍵觸發事件
       unlistenShortcut = await listen<string>("shortcut-event", (event) => {
@@ -316,6 +338,7 @@ export function useAppLogic() {
             prompt: current.customPrompt,
           });
           setTranscription(result);
+          fetchHistory(); // 轉錄完成後更新歷史
         } catch (err) {
           if (!String(err).includes("No active recording session")) {
             setError(`轉錄錯誤: ${err}`);
@@ -366,6 +389,7 @@ export function useAppLogic() {
       });
 
       setTranscription(result);
+      fetchHistory(); // 檔案處理完成後更新歷史
     } catch (err) {
       setError(`檔案處理失敗: ${err}`);
     } finally {
@@ -442,6 +466,7 @@ export function useAppLogic() {
     transcription, setTranscription,
     error, setError,
     recordingsDir,
+    history, fetchHistory, deleteHistoryItem,
 
     // Actions
     handleToggleLogic,
