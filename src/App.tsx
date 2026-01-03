@@ -53,7 +53,7 @@ function App() {
   }, []);
 
   // 使用 Custom Hook 控制懸浮窗
-  useHintWindowControl({ isRecording, isLoading, windowLabel });
+  useHintWindowControl({ isRecording, isLoading, windowLabel, uiLanguage });
 
   if (windowLabel === "recording-hint") {
     return null;

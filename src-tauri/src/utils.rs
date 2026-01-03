@@ -87,3 +87,52 @@ pub async fn interrupt_and_wait(pid: u32, timeout_ms: u64) {
         let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
     }
 }
+
+/// Simulates a system-level Cmd+V paste action on macOS.
+#[cfg(target_os = "macos")]
+pub fn simulate_paste() {
+    const K_CG_EVENT_SOURCE_STATE_HID_SYSTEM_STATE: i32 = 1;
+    const K_CG_HID_EVENT_TAP: u32 = 0;
+    const V_KEY: u16 = 9;
+    const CMD_FLAG: u64 = 0x0010_0000; // kCGEventFlagMaskCommand
+
+    type CGEventSourceRef = *mut std::ffi::c_void;
+    type CGEventRef = *mut std::ffi::c_void;
+
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGEventSourceCreate(state: i32) -> CGEventSourceRef;
+        fn CGEventCreateKeyboardEvent(
+            source: CGEventSourceRef,
+            virtual_key: u16,
+            key_down: bool,
+        ) -> CGEventRef;
+        fn CGEventSetFlags(event: CGEventRef, flags: u64);
+        fn CGEventPost(tap: u32, event: CGEventRef);
+        fn CFRelease(obj: *mut std::ffi::c_void);
+    }
+
+    unsafe {
+        let source = CGEventSourceCreate(K_CG_EVENT_SOURCE_STATE_HID_SYSTEM_STATE);
+
+        // Key down: Cmd + V
+        let event_down = CGEventCreateKeyboardEvent(source, V_KEY, true);
+        if !event_down.is_null() {
+            CGEventSetFlags(event_down, CMD_FLAG);
+            CGEventPost(K_CG_HID_EVENT_TAP, event_down);
+            CFRelease(event_down);
+        }
+
+        // Key up: Cmd + V
+        let event_up = CGEventCreateKeyboardEvent(source, V_KEY, false);
+        if !event_up.is_null() {
+            CGEventSetFlags(event_up, CMD_FLAG);
+            CGEventPost(K_CG_HID_EVENT_TAP, event_up);
+            CFRelease(event_up);
+        }
+
+        if !source.is_null() {
+            CFRelease(source);
+        }
+    }
+}

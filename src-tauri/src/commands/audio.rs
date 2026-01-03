@@ -1,9 +1,10 @@
 use crate::state::AppState;
 use crate::types::{AudioDevice, RecordingSession};
-use crate::utils::{get_model_info, interrupt_and_wait, new_session_paths};
+use crate::utils::{get_model_info, interrupt_and_wait, new_session_paths, simulate_paste};
 use std::process::Command;
 use std::thread;
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
@@ -318,6 +319,19 @@ pub async fn stop_and_transcribe(
 
     // Optional: completion sounds
     if !transcript_text.is_empty() {
+        // Auto-Copy (Backend is more reliable than Frontend writeText)
+        let _ = app.clipboard().write_text(transcript_text.clone());
+
+        #[cfg(target_os = "macos")]
+        {
+            // Auto-Paste: Simulate Cmd+V
+            // Small delay to ensure clipboard is ready
+            thread::spawn(|| {
+                thread::sleep(std::time::Duration::from_millis(50));
+                simulate_paste();
+            });
+        }
+
         thread::spawn(|| {
             let _ = Command::new("afplay")
                 .arg("/System/Library/Sounds/Glass.aiff")
@@ -455,12 +469,15 @@ pub async fn transcribe_external_file(
         .await
         .map_err(|e| format!("Failed to write transcript: {}", e))?;
 
-    // Success sound
-    thread::spawn(|| {
-        let _ = Command::new("afplay")
-            .arg("/System/Library/Sounds/Glass.aiff")
-            .output();
-    });
+    // Success sound & Auto-copy
+    if !final_text.is_empty() {
+        let _ = app.clipboard().write_text(final_text.clone());
+        thread::spawn(|| {
+            let _ = Command::new("afplay")
+                .arg("/System/Library/Sounds/Glass.aiff")
+                .output();
+        });
+    }
 
     Ok(final_text)
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ModelStatus, AudioDevice } from "../constants";
 import { UILanguage } from "../i18n";
@@ -317,7 +316,6 @@ export function useAppLogic() {
             prompt: current.customPrompt,
           });
           setTranscription(result);
-          await writeText(result);
         } catch (err) {
           if (!String(err).includes("No active recording session")) {
             setError(`轉錄錯誤: ${err}`);
@@ -368,7 +366,6 @@ export function useAppLogic() {
       });
 
       setTranscription(result);
-      await writeText(result); // Auto copy
     } catch (err) {
       setError(`檔案處理失敗: ${err}`);
     } finally {
