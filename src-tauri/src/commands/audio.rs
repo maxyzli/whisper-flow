@@ -240,71 +240,124 @@ pub async fn stop_and_transcribe(
 
     // Convert to WAV
     println!("Converting to WAV: {}", session.wav_path.display());
-    let convert_result = app
-        .shell()
-        .sidecar("ffmpeg")
-        .map_err(|e| e.to_string())?
-        .args([
-            "-y",
-            "-f",
-            "s16le",
-            "-ar",
-            "16000",
-            "-ac",
-            "1",
-            "-i",
-            session
-                .raw_path
-                .to_str()
-                .ok_or_else(|| "Invalid raw path".to_string())?,
-            session
-                .wav_path
-                .to_str()
-                .ok_or_else(|| "Invalid wav path".to_string())?,
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("Conversion failed: {}", e))?;
+    let mut convert_rx = {
+        let (rx, child) = app
+            .shell()
+            .sidecar("ffmpeg")
+            .map_err(|e| e.to_string())?
+            .args([
+                "-y",
+                "-f",
+                "s16le",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-i",
+                session
+                    .raw_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid raw path".to_string())?,
+                session
+                    .wav_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid wav path".to_string())?,
+            ])
+            .spawn()
+            .map_err(|e| e.to_string())?;
 
-    if !convert_result.status.success() {
-        let stderr = String::from_utf8_lossy(&convert_result.stderr);
-        return Err(format!("FFmpeg conversion failed: {}", stderr));
+        // Store child for abortion
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = Some(child);
+        rx
+    };
+
+    let mut convert_stderr = Vec::new();
+    let mut convert_success = false;
+    while let Some(event) = convert_rx.recv().await {
+        match event {
+            CommandEvent::Stderr(line) => convert_stderr.extend(line),
+            CommandEvent::Terminated(payload) => {
+                convert_success = payload.code == Some(0);
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    // Clear child
+    {
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = None;
+    }
+
+    if !convert_success {
+        let stderr_str = String::from_utf8_lossy(&convert_stderr);
+        return Err(format!("FFmpeg conversion failed: {}", stderr_str));
     }
 
     // Run Whisper
     println!("Running Whisper...");
     let (model_path, _) = get_model_info(&app, &model_type)?;
 
-    let whisper_output = app
-        .shell()
-        .sidecar("whisper-cli")
-        .map_err(|e| e.to_string())?
-        .args([
-            "-m",
-            model_path
-                .to_str()
-                .ok_or_else(|| "Invalid model path".to_string())?,
-            "-f",
-            session
-                .wav_path
-                .to_str()
-                .ok_or_else(|| "Invalid wav path".to_string())?,
-            "-t",
-            "8",
-            "-l",
-            &language,
-            "-nt", // No timestamps for quick dictation
-            "--prompt",
-            &prompt,
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("Whisper failed: {}", e))?;
+    let mut whisper_rx = {
+        let (rx, child) = app
+            .shell()
+            .sidecar("whisper-cli")
+            .map_err(|e| e.to_string())?
+            .args([
+                "-m",
+                model_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid model path".to_string())?,
+                "-f",
+                session
+                    .wav_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid wav path".to_string())?,
+                "-t",
+                "8",
+                "-l",
+                &language,
+                "-nt",
+                "--prompt",
+                &prompt,
+            ])
+            .spawn()
+            .map_err(|e| e.to_string())?;
 
-    let transcript_text = String::from_utf8_lossy(&whisper_output.stdout)
-        .trim()
-        .to_string();
-    let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = Some(child);
+        rx
+    };
+
+    let mut whisper_stdout = Vec::new();
+    let mut whisper_stderr = Vec::new();
+    let mut whisper_success = false;
+    while let Some(event) = whisper_rx.recv().await {
+        match event {
+            CommandEvent::Stdout(line) => whisper_stdout.extend(line),
+            CommandEvent::Stderr(line) => whisper_stderr.extend(line),
+            CommandEvent::Terminated(payload) => {
+                whisper_success = payload.code == Some(0);
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    // Clear child
+    {
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = None;
+    }
+
+    if !whisper_success {
+        return Err("Whisper transcription failed or was aborted".into());
+    }
+
+    let transcript_text = String::from_utf8_lossy(&whisper_stdout).trim().to_string();
+    let whisper_stderr = String::from_utf8_lossy(&whisper_stderr).to_string();
 
     // Persist transcript.txt
     let transcript_body = if !transcript_text.is_empty() {
@@ -331,12 +384,6 @@ pub async fn stop_and_transcribe(
                 simulate_paste();
             });
         }
-
-        thread::spawn(|| {
-            let _ = Command::new("afplay")
-                .arg("/System/Library/Sounds/Glass.aiff")
-                .output();
-        });
     } else {
         thread::spawn(|| {
             let _ = Command::new("afplay")
@@ -351,6 +398,7 @@ pub async fn stop_and_transcribe(
 #[tauri::command(rename_all = "camelCase")]
 pub async fn transcribe_external_file(
     app: AppHandle,
+    state: State<'_, AppState>,
     file_path: String,
     model_type: String,
     language: String,
@@ -367,30 +415,54 @@ pub async fn transcribe_external_file(
 
     // 2. Use FFmpeg to convert input (MP4/MP3/etc) to 16kHz WAV
     println!("Converting to WAV...");
-    let convert_result = app
-        .shell()
-        .sidecar("ffmpeg")
-        .map_err(|e| e.to_string())?
-        .args([
-            "-y",
-            "-i",
-            &file_path,
-            "-vn",
-            "-ar",
-            "16000",
-            "-ac",
-            "1",
-            wav_path
-                .to_str()
-                .ok_or_else(|| "Invalid wav path".to_string())?,
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("FFmpeg execution failed: {}", e))?;
+    let mut convert_rx = {
+        let (rx, child) = app
+            .shell()
+            .sidecar("ffmpeg")
+            .map_err(|e| e.to_string())?
+            .args([
+                "-y",
+                "-i",
+                &file_path,
+                "-vn",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                wav_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid wav path".to_string())?,
+            ])
+            .spawn()
+            .map_err(|e| e.to_string())?;
 
-    if !convert_result.status.success() {
-        let stderr = String::from_utf8_lossy(&convert_result.stderr);
-        return Err(format!("FFmpeg conversion failed: {}", stderr));
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = Some(child);
+        rx
+    };
+
+    let mut convert_stderr = Vec::new();
+    let mut convert_success = false;
+    while let Some(event) = convert_rx.recv().await {
+        match event {
+            CommandEvent::Stderr(line) => convert_stderr.extend(line),
+            CommandEvent::Terminated(payload) => {
+                convert_success = payload.code == Some(0);
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    // Clear child
+    {
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = None;
+    }
+
+    if !convert_success {
+        let stderr_str = String::from_utf8_lossy(&convert_stderr);
+        return Err(format!("FFmpeg conversion failed: {}", stderr_str));
     }
 
     // 3. Prepare Whisper parameters
@@ -421,14 +493,44 @@ pub async fn transcribe_external_file(
     }
 
     // 4. Run Whisper
-    let whisper_output = app
-        .shell()
-        .sidecar("whisper-cli")
-        .map_err(|e| e.to_string())?
-        .args(whisper_args)
-        .output()
-        .await
-        .map_err(|e| format!("Whisper failed: {}", e))?;
+    let mut whisper_rx = {
+        let (rx, child) = app
+            .shell()
+            .sidecar("whisper-cli")
+            .map_err(|e| e.to_string())?
+            .args(whisper_args)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = Some(child);
+        rx
+    };
+
+    let mut whisper_stdout = Vec::new();
+    let mut whisper_stderr = Vec::new();
+    let mut whisper_success = false;
+    while let Some(event) = whisper_rx.recv().await {
+        match event {
+            CommandEvent::Stdout(line) => whisper_stdout.extend(line),
+            CommandEvent::Stderr(line) => whisper_stderr.extend(line),
+            CommandEvent::Terminated(payload) => {
+                whisper_success = payload.code == Some(0);
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    // Clear child
+    {
+        let mut guard = state.processing_child.lock().unwrap();
+        *guard = None;
+    }
+
+    if !whisper_success {
+        return Err("Whisper transcription failed or was aborted".into());
+    }
 
     let final_text: String;
 
@@ -445,18 +547,14 @@ pub async fn transcribe_external_file(
         } else {
             // Fallback to stdout if SRT file generation failed
             println!("Warning: SRT file not found, falling back to stdout");
-            final_text = String::from_utf8_lossy(&whisper_output.stdout)
-                .trim()
-                .to_string();
+            final_text = String::from_utf8_lossy(&whisper_stdout).trim().to_string();
         }
     } else {
         // Plain text mode: read directly from stdout
-        final_text = String::from_utf8_lossy(&whisper_output.stdout)
-            .trim()
-            .to_string();
+        final_text = String::from_utf8_lossy(&whisper_stdout).trim().to_string();
     }
 
-    let whisper_stderr = String::from_utf8_lossy(&whisper_output.stderr).to_string();
+    let whisper_stderr = String::from_utf8_lossy(&whisper_stderr).to_string();
 
     // 5. Persist and return
     let transcript_body = if !final_text.is_empty() {
@@ -469,15 +567,20 @@ pub async fn transcribe_external_file(
         .await
         .map_err(|e| format!("Failed to write transcript: {}", e))?;
 
-    // Success sound & Auto-copy
+    // Auto-copy
     if !final_text.is_empty() {
         let _ = app.clipboard().write_text(final_text.clone());
-        thread::spawn(|| {
-            let _ = Command::new("afplay")
-                .arg("/System/Library/Sounds/Glass.aiff")
-                .output();
-        });
     }
 
     Ok(final_text)
+}
+
+#[tauri::command]
+pub async fn abort_transcription(state: State<'_, AppState>) -> Result<(), String> {
+    let mut guard = state.processing_child.lock().unwrap();
+    if let Some(child) = guard.take() {
+        let _ = child.kill();
+        println!("[Rust] Transcription aborted by user.");
+    }
+    Ok(())
 }

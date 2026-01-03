@@ -50,8 +50,22 @@ body,
   align-items: center;
   justify-content: center;
   height: 32px;
-  width: 120px;
   overflow: hidden;
+}
+
+.voice-bars-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+}
+
+.voice-bar {
+  width: 3px;
+  min-height: 4px;
+  border-radius: 2px;
+  transition: height 0.1s ease, background-color 0.2s ease;
 }
 
 .hint-dot {
@@ -72,4 +86,47 @@ body,
   font-size: 13px;
   font-weight: 500;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Spinner */
+.spinner-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  position: absolute;
+}
+
+.stop-icon {
+  width: 8px;
+  height: 8px;
+  background-color: var(--danger);
+  border-radius: 1px;
+}
+
+.spinner-container:hover .stop-icon {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }

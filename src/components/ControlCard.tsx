@@ -24,17 +24,19 @@ export function ControlCard({
         className={`record-main-btn ${isRecording ? "recording" : ""} ${isLoading ? "loading" : ""
           }`}
         onClick={handleToggleLogic}
-        disabled={isStarting || isLoading}
+        disabled={isStarting}
       >
         <div className="inner-circle"></div>
         <span>
-          {isLoading
-            ? t.btnProcessing
-            : isStarting
-              ? t.btnStarting
-              : isRecording
-                ? t.btnStop
-                : t.btnStart}
+          {isLoading ? (
+            <div className="spinner"></div>
+          ) : isStarting ? (
+            t.btnStarting
+          ) : isRecording ? (
+            t.btnStop
+          ) : (
+            t.btnStart
+          )}
         </span>
       </button>
     </section>

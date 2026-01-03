@@ -85,6 +85,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             session: Mutex::new(None),
+            processing_child: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             // Model commands
@@ -95,6 +96,7 @@ pub fn run() {
             commands::audio::start_recording,
             commands::audio::stop_and_transcribe,
             commands::audio::transcribe_external_file,
+            commands::audio::abort_transcription,
             // System commands
             commands::system::check_accessibility_permission,
             commands::system::prompt_accessibility_permission,

@@ -57,7 +57,9 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel, uiLa
             // 延遲顯示，確保渲染準備就緒
             showTimer = setTimeout(async () => {
               console.log("Hint Window: Showing...");
-              try { await hintWin.setIgnoreCursorEvents(true); } catch (e) { }
+              // 當轉錄中 (isLoading) 時，不忽略滑鼠事件，以便用戶點擊取消
+              // 當錄音中 (isRecording) 時，維持忽略事件以避免干擾操作
+              try { await hintWin.setIgnoreCursorEvents(!isLoading); } catch (e) { }
               await hintWin.show();
               // 再次同步狀態，防止 hint 視窗剛啟動沒收到
               emit("sync-recording-status", isRecording);

@@ -293,8 +293,18 @@ export function useAppLogic() {
     try {
       const current = stateRef.current;
 
-      // 如果系統正在轉錄或下載模型，則直接忽略任何動作
-      if (current.isLoading || current.downloading) {
+      // 如果正在轉錄中，再次點擊錄音按鈕則嘗試「取消」
+      if (current.isLoading) {
+        try {
+          await invoke("abort_transcription");
+        } catch (err) {
+          console.error("Cancel failed:", err);
+        }
+        return;
+      }
+
+      // 如果正在下載模型，則直接忽略任何動作 (保留原有行為)
+      if (current.downloading) {
         return;
       }
 
