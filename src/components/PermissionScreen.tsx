@@ -367,18 +367,25 @@ export function PermissionScreen({
 
   useEffect(() => {
     let unlistenReady: any;
+    let unlistenResult: any;
 
     const setupListeners = async () => {
       unlistenReady = await listen("recording-ready", () => {
         // If we are still on the intro page, move to samples page to see the typing
-        setStep("try-it-samples");
+        if (step === "try-it") setStep("try-it-samples");
 
-        setIsTranscribing(true);
+        setIsRecordingVisual(true);
+        setIsTranscribing(false);
         setTestTranscription("");
         setShowDocHint(false);
+      });
 
-        // Simulate "typing" the result for the demo
-        const text = "My shopping list, bananas, oat milk, dark chocolate";
+      unlistenResult = await listen<string>("transcription-result", (event) => {
+        const text = event.payload;
+        setIsRecordingVisual(false);
+        setIsTranscribing(true); // Typo simulation counts as "transcribing" for the UI
+
+        // Simulate "typing" the REAL result
         let i = 0;
         const interval = setInterval(() => {
           setTestTranscription(text.slice(0, i + 1));
@@ -386,7 +393,7 @@ export function PermissionScreen({
           if (i >= text.length) {
             clearInterval(interval);
             setIsTranscribing(false);
-            // After successful "dictation", enable navigation
+            setDemoFinished(true);
           }
         }, 30);
       });
@@ -398,6 +405,7 @@ export function PermissionScreen({
 
     return () => {
       if (unlistenReady) unlistenReady();
+      if (unlistenResult) unlistenResult();
     };
   }, [step]);
 
@@ -780,8 +788,13 @@ export function PermissionScreen({
               </div>
 
               <div className="continue-footer-fixed">
-                <button className={`btn-black continue-pill ${testTranscription.length > 30 ? 'fade-in' : 'disabled'}`} onClick={onRetry}>
-                  Continue
+                <button
+                  className={`btn-black continue-pill ${demoFinished ? '' : 'disabled'}`}
+                  onClick={onRetry}
+                  disabled={!demoFinished}
+                  style={{ opacity: demoFinished ? 1 : 0.5, cursor: demoFinished ? 'pointer' : 'not-allowed' }}
+                >
+                  Complete Onboarding
                 </button>
               </div>
             </div>
@@ -834,14 +847,6 @@ export function PermissionScreen({
                       </div>
                     )}
 
-                    {demoFinished && (
-                      <div className="demo-success-footer fade-in" style={{ marginTop: '32px', textAlign: 'center' }}>
-                        <p style={{ color: '#34C759', fontWeight: 600, marginBottom: '16px' }}>✓ Successfully Transcribed!</p>
-                        <button className="btn-black continue-pill" onClick={() => window.location.reload()}>
-                          Complete Onboarding
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
