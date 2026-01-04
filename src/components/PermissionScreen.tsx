@@ -31,6 +31,8 @@ export function PermissionScreen({
   const [testTranscription, setTestTranscription] = useState("");
   const [showDocHint, setShowDocHint] = useState(true);
   const [isMockupFocused, setIsMockupFocused] = useState(false);
+  const [isRecordingVisual, setIsRecordingVisual] = useState(false);
+  const [demoFinished, setDemoFinished] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
