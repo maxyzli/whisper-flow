@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import logoWhite from "../assets/logo_white.png";
 
 interface PermissionScreenProps {
   onRetry: () => void;
 }
 
-type Step = "welcome" | "permissions" | "test-mic";
+type Step = "welcome" | "permissions" | "test-mic" | "test-hotkey";
 
 export function PermissionScreen({
   onRetry,
@@ -17,8 +18,80 @@ export function PermissionScreen({
   const [activeCard, setActiveCard] = useState<"acc" | "mic">("acc");
 
   const [showMicModal, setShowMicModal] = useState(false);
+  const [showHotkeyModal, setShowHotkeyModal] = useState(false);
+  const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
+  const [selectedHotkey, setSelectedHotkey] = useState<string[]>(["fn"]);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("default");
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [isFnPressed, setIsFnPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isRecordingHotkey) {
+        e.preventDefault();
+
+        const keyMap: Record<string, string> = {
+          'meta': 'cmd',
+          'control': 'control',
+          'alt': 'option',
+          'shift': 'shift',
+          'function': 'fn'
+        };
+
+        let key = e.key.toLowerCase();
+        if (e.code === 'Function' || e.key === 'Fn') key = 'fn';
+        key = keyMap[key] || key;
+
+        setSelectedHotkey(prev => {
+          if (!prev.includes(key)) {
+            // If we were just starting (e.g. state was 'fn' or empty), replace or append
+            // For recording, we usually want to start fresh on first keydown 
+            // but keep accumulating for the combination.
+            // Let's use a trick: if it's the first keydown in this recording session, start fresh.
+            // But we don't have a "first" flag easily. 
+            // Let's just append if it's not there.
+            return [...prev, key];
+          }
+          return prev;
+        });
+        return;
+      }
+
+      // Normal Fn key visual state
+      if (
+        e.key === 'Fn' ||
+        e.key === 'Function' ||
+        e.code === 'Function' ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.code === 'ControlLeft' ||
+        e.code === 'ControlRight' ||
+        e.code === 'AltLeft' ||
+        e.code === 'AltRight' ||
+        e.code === 'MetaLeft' ||
+        e.code === 'MetaRight'
+      ) {
+        setIsFnPressed(true);
+      }
+    };
+
+    const handleKeyUp = () => {
+      if (isRecordingHotkey) {
+        // Commit on ANY key release
+        setIsRecordingHotkey(false);
+        return;
+      }
+      setIsFnPressed(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isRecordingHotkey]);
 
   // --- Auto Detection ---
   useEffect(() => {
@@ -70,7 +143,7 @@ export function PermissionScreen({
 
   const CheckIcon = () => (
     <div className="check-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </div>
@@ -169,11 +242,58 @@ export function PermissionScreen({
     );
   };
 
+  const KeyboardVisualizer = () => {
+    return (
+      <div className="keyboard-visualizer">
+        <div className="keyboard-row">
+          <div className="key tab">tab</div>
+          <div className="key">Q</div>
+          <div className="key">W</div>
+        </div>
+        <div className="keyboard-row">
+          <div className="key caps">caps lock</div>
+          <div className="key">A</div>
+          <div className="key">S</div>
+        </div>
+        <div className="keyboard-row">
+          <div className="key shift">shift</div>
+          <div className="key">Z</div>
+          <div className="key">X</div>
+        </div>
+        <div className="keyboard-row bottom">
+          <div className={`key fn-key ${isFnPressed ? 'active' : ''}`}>
+            <div className="fn-top">fn</div>
+            <svg className="globe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          </div>
+          <div className="key control">
+            <div className="key-inner">
+              <span className="key-symbol">^</span>
+              <span>control</span>
+            </div>
+          </div>
+          <div className="key option">
+            <div className="key-inner">
+              <span className="key-symbol">⌥</span>
+              <span>option</span>
+            </div>
+          </div>
+          <div className="key command">
+            <div className="key-inner">
+              <span className="key-symbol">⌘</span>
+              <span>command</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const getProgressWidth = () => {
     switch (step) {
-      case "welcome": return "25%";
-      case "permissions": return "54%";
-      case "test-mic": return "83%";
+      case "welcome": return "20%";
+      case "permissions": return "45%";
+      case "test-mic": return "70%";
+      case "test-hotkey": return "90%";
       default: return "0%";
     }
   };
@@ -182,7 +302,7 @@ export function PermissionScreen({
 
   return (
     <div className="onboarding-container">
-      <header className="onboarding-header">
+      <header className="onboarding-header" data-tauri-drag-region>
         <div className="header-progress-bar" style={{ width: getProgressWidth() }}></div>
         <div className="nav-steps">
           <div className={step === "welcome" ? "nav-step active" : "nav-step"}>Sign up</div>
@@ -193,7 +313,7 @@ export function PermissionScreen({
           <div className="nav-arrow">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
-          <div className={step === "test-mic" ? "nav-step active" : "nav-step"}>Set up</div>
+          <div className={step === "test-mic" || step === "test-hotkey" ? "nav-step active" : "nav-step"}>Set up</div>
           <div className="nav-arrow">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
@@ -205,9 +325,7 @@ export function PermissionScreen({
         {step === "welcome" && (
           <div className="welcome-step">
             <div className="logo-large">
-              <svg className="logo-icon-svg" viewBox="0 0 24 24">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-              </svg>
+              <img src={logoWhite} alt="Whisper Flow Logo" className="logo-img" />
             </div>
             <h1>Welcome to Whisper Flow</h1>
             <p>Smart dictation that understands you</p>
@@ -318,20 +436,25 @@ export function PermissionScreen({
                       <div className="mockup-dot red"></div>
                       <div className="mockup-dot yellow"></div>
                       <div className="mockup-dot green"></div>
-                      <span style={{ fontSize: '12px', color: '#86868b', marginLeft: '8px' }}>Accessibility</span>
+                      <span className="mockup-title">Accessibility</span>
                     </div>
                     <div className="mac-dialog-embed">
-                      <p style={{ fontSize: '13px', color: '#86868b', marginBottom: '16px' }}>
+                      <p className="mockup-desc">
                         Allow the applications below to control your computer.
                       </p>
-                      <div className="item">
-                        <div className="logo-small-mac">
-                          <svg className="logo-icon-svg" viewBox="0 0 24 24">
-                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-                          </svg>
+                      <div className="mockup-list">
+                        <div className="item">
+                          <span className="mockup-item-name">HazeOver</span>
+                          <div className="toggle on"></div>
                         </div>
-                        <span style={{ fontSize: '14px', fontWeight: 500 }}>Whisper Flow</span>
-                        <div className={accGranted ? 'toggle on' : 'toggle'}></div>
+                        <div className="item">
+                          <span className="mockup-item-name">Alfred 5</span>
+                          <div className="toggle on"></div>
+                        </div>
+                        <div className="item">
+                          <span className="mockup-item-name">Whisper Flow</span>
+                          <div className={accGranted ? 'toggle on' : 'toggle'}></div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -377,7 +500,7 @@ export function PermissionScreen({
                 <button className="btn-white-pill" onClick={handleOpenMicModal}>
                   No, change microphone
                 </button>
-                <button className="btn-black continue-pill" onClick={onRetry}>
+                <button className="btn-black continue-pill" onClick={() => setStep("test-hotkey")}>
                   Yes, continue
                 </button>
               </div>
@@ -391,12 +514,47 @@ export function PermissionScreen({
           </div>
         )}
 
+        {step === "test-hotkey" && (
+          <div className="split-layout test-hotkey-step">
+            <div className="split-left">
+              <div className="back-link" onClick={() => setStep("test-mic")}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back</span>
+              </div>
+              <div className="split-left-content">
+                <h2 className="step-title">Press to test your voice dictation hotkey</h2>
+                <p className="step-subtitle">
+                  We recommend the <span className="key-inline">fn</span> key at the bottom left of the keyboard.
+                </p>
+                <div className="test-mic-prompt">
+                  <p>Do you see the button turning blue while pressing?</p>
+                </div>
+              </div>
+
+              <div className="mic-test-footer">
+                <button className="btn-white-pill" onClick={() => setShowHotkeyModal(true)}>
+                  No, change keyboard shortcut
+                </button>
+                <button className="btn-black continue-pill" onClick={onRetry}>
+                  Yes, continue
+                </button>
+              </div>
+            </div>
+
+            <div className="split-right">
+              <div className="visualizer-wrapper">
+                <KeyboardVisualizer />
+              </div>
+            </div>
+          </div>
+        )}
+
         {showMicModal && (
           <div className="mic-select-overlay" onClick={() => setShowMicModal(false)}>
             <div className="mic-select-modal" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>Select a different microphone</h3>
-                <button className="close-btn" onClick={() => setShowMicModal(false)}>
+                <button className="modal-close" onClick={() => setShowMicModal(false)}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
@@ -420,6 +578,50 @@ export function PermissionScreen({
                     {selectedDeviceId === device.deviceId && <div className="device-check">✓</div>}
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showHotkeyModal && (
+          <div className="mic-select-overlay" onClick={() => setShowHotkeyModal(false)}>
+            <div className="hotkey-select-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Change keyboard shortcut</h3>
+                <button className="modal-close" onClick={() => setShowHotkeyModal(false)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="modal-body hotkey-setting-row">
+                <div className="hotkey-info">
+                  <h4>Voice dictation hotkey</h4>
+                  <p>Hold down to speak. Double-press for hands-free mode.</p>
+                </div>
+                <div className="hotkey-input-wrapper">
+                  <div
+                    className={`hotkey-pill-box ${isRecordingHotkey ? 'recording' : ''}`}
+                    onClick={() => {
+                      setSelectedHotkey([]); // Clear current to start fresh
+                      setIsRecordingHotkey(true);
+                    }}
+                  >
+                    {isRecordingHotkey ? (
+                      <span className="hotkey-pill recording-text">Record New...</span>
+                    ) : (
+                      <div className="hotkey-pills">
+                        {selectedHotkey.map(k => (
+                          <span key={k} className="hotkey-pill">
+                            {k === 'cmd' ? '⌘' :
+                              k === 'shift' ? '⇧' :
+                                k === 'option' ? '⌥' :
+                                  k === 'control' ? '⌃' :
+                                    k.length === 1 ? k.toUpperCase() : k}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -15,9 +15,11 @@
       {
         "label": "main",
         "title": "Whisper Flow",
-        "width": 480,
-        "height": 820,
-        "resizable": true
+        "width": 1200,
+        "height": 840,
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       },
       {
         "label": "recording-hint",

@@ -6,7 +6,7 @@ interface HeaderProps {
 
 export function Header({ view, onToggleSettings, t }: HeaderProps) {
   return (
-    <header className="main-header">
+    <header className="main-header" data-tauri-drag-region>
       <div className="header-left">
         {view === "settings" && (
           <button className="back-btn" onClick={onToggleSettings} title={t.backBtn}>
