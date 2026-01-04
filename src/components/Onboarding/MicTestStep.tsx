@@ -1,4 +1,3 @@
-import React from "react";
 import { SplitLayout } from "./components/SplitLayout";
 import { MicVisualizer } from "./components/MicVisualizer";
 

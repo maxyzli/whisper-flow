@@ -1,4 +1,3 @@
-import React from "react";
 import logoWhite from "../../assets/logo_white.png";
 
 interface WelcomeStepProps {
