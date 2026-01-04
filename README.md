@@ -7,6 +7,12 @@ Whisper Flow runs OpenAI's Whisper models locally on your machine, ensuring priv
 ![Tauri](https://img.shields.io/badge/Tauri-v2-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 
+## 📥 Download
+
+> **Note**: Whisper Flow is currently available for **macOS** (Silicon/Intel) only.
+
+[**Download the latest version from GitHub Releases**](https://github.com/maxyzli/whisper-flow/releases)
+
 ## ✨ Features
 
 - **🔒 Local & Private**: All transcription happens on-device using quantized Whisper models (ggml).
@@ -26,7 +32,7 @@ Whisper Flow runs OpenAI's Whisper models locally on your machine, ensuring priv
 - **Backend**: Rust (Tauri v2), `objc2` (for macOS native window management), `cpal` (Audio), `whisper.cpp` (Model inference)
 - **State Management**: React Hooks + Tauri Event System
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -47,12 +53,19 @@ Whisper Flow runs OpenAI's Whisper models locally on your machine, ensuring priv
    npm install
    ```
 
-3. **Run in Development Mode**
+3. **Setup Binaries & Models**
+   - **Models**: The app will automatically download the Whisper model on first run.
+   - **Binaries**: You must manually place the required binaries in `src-tauri/binaries/`:
+     - `ffmpeg`: Download a standalone FFmpeg binary (aarch64 for Apple Silicon, x64 for Intel).
+     - `whisper-cli`: Build or download `whisper-cpp` CLI.
+     - **Naming**: Ensure files are named specifically for your architecture, e.g., `ffmpeg-aarch64-apple-darwin` and `whisper-cli-aarch64-apple-darwin`.
+
+4. **Run in Development Mode**
    ```bash
    npm run tauri dev
    ```
 
-4. **Build for Production**
+5. **Build for Production**
    ```bash
    npm run tauri build
    ```
