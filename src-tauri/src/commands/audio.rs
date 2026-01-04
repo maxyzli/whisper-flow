@@ -119,7 +119,7 @@ pub async fn start_recording(
             "-i",
             &format!(":{}", device_id),
             "-filter_complex",
-            "[0:a]asplit=2[rec][meter];[meter]ebur128=metadata=1,anullsink",
+            "[0:a]asplit=2[rec][meter];[meter]ebur128=video=0,anullsink",
             "-map",
             "[rec]",
             "-vn",

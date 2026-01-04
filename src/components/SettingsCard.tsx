@@ -20,8 +20,6 @@ interface SettingsCardProps {
   setIsRecordingShortcut: (isRecording: boolean) => void;
   withTimestamps: boolean;
   setWithTimestamps: (withTimestamps: boolean) => void;
-  customPrompt: string;
-  setCustomPrompt: (prompt: string) => void;
   recordingsDir: string;
   openRecordingsFolder: () => void;
   t: any;
@@ -44,8 +42,6 @@ export function SettingsCard({
   setIsRecordingShortcut,
   withTimestamps,
   setWithTimestamps,
-  customPrompt,
-  setCustomPrompt,
   recordingsDir,
   openRecordingsFolder,
   t,
@@ -112,21 +108,6 @@ export function SettingsCard({
       </div>
 
       {/* 3. AI 智力與提示詞 (AI Personalization) */}
-      <div className="settings-group">
-        <h3>{t.groupModel}</h3>
-        <div className="input-group">
-          <label>{t.labelCustomPrompt}</label>
-          <textarea
-            className="modern-textarea"
-            value={customPrompt}
-            onChange={(e) => setCustomPrompt(e.target.value)}
-            placeholder={t.placeholderPrompt}
-            disabled={isRecording || isStarting || isLoading}
-            style={{ minHeight: "80px" }}
-          />
-          <p className="helper-text">{t.helperPrompt}</p>
-        </div>
-      </div>
 
       {/* 4. 檔案與字幕 (Files & Output) */}
       <div className="settings-group">

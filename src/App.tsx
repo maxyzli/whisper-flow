@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import "./App.css";
+import "./App.css"; // Imports variables (we override them in main.css)
 import { useAppLogic } from "./hooks/useAppLogic";
 import { useHintWindowControl } from "./hooks/useHintWindowControl";
 import { PermissionScreen } from "./components/PermissionScreen";
-import { Header } from "./components/Header";
 import { SettingsCard } from "./components/SettingsCard";
-import { ControlCard } from "./components/ControlCard";
 import { HistorySection } from "./components/HistorySection";
 import { DragOverlay } from "./components/DragOverlay";
 import { ShortcutOverlay } from "./components/ShortcutOverlay";
@@ -13,9 +11,14 @@ import { ModelDownloadScreen } from "./components/ModelDownloadScreen";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { translations } from "./i18n";
 
+// New Components
+import { MainLayout } from "./components/MainLayout";
+import { DashboardHome } from "./components/DashboardHome";
+
 function App() {
   const [windowLabel, setWindowLabel] = useState("");
-  const [currentView, setCurrentView] = useState<"recorder" | "settings">("recorder");
+  // Replaced currentView with activeTab for SideBar navigation
+  const [activeTab, setActiveTab] = useState<"home" | "history" | "settings">("home");
 
   const {
     // State
@@ -24,7 +27,6 @@ function App() {
     selectedDevice, setSelectedDevice,
     shortcutKey, setIsRecordingShortcut, isRecordingShortcut,
     withTimestamps, setWithTimestamps,
-    customPrompt, setCustomPrompt,
     uiLanguage, setUiLanguage,
     modelStatus,
     devices, fetchDevices,
@@ -40,20 +42,17 @@ function App() {
     deleteHistoryItem,
 
     // Actions
-    handleToggleLogic,
-    handleImportFile,
     handleDownload,
-    openSystemSettings,
     openRecordingsFolder,
   } = useAppLogic();
 
-  // --- 視窗管理 ---
+  // --- Window Management ---
   useEffect(() => {
     const win = getCurrentWindow();
     setWindowLabel(win.label);
   }, []);
 
-  // 使用 Custom Hook 控制懸浮窗
+  // Use Custom Hook for hint window
   useHintWindowControl({ isRecording, isLoading, windowLabel, uiLanguage });
 
   if (windowLabel === "recording-hint") {
@@ -62,28 +61,23 @@ function App() {
 
   const t = translations[uiLanguage];
 
-  // --- Onboarding Window Resize ---
+  // --- Window Resize Logic ---
+  // Force Desktop Size on Mount/Permission Grant
   useEffect(() => {
     const win = getCurrentWindow();
     if (windowLabel !== "main") return;
 
-    if (!hasPermission) {
-      // Scale up for onboarding (Fine-tuned rectangular look)
-      win.setSize({ type: 'Logical', width: 1080, height: 760 } as any);
-      win.center();
-    } else {
-      // Scale down for main recorder (Fine-tuned base size)
-      win.setSize({ type: 'Logical', width: 480, height: 820 } as any);
-    }
-  }, [hasPermission, windowLabel]);
+    // Fix window size to 1080x760 (Desktop Dashboard Size)
+    // We do this regardless of permission state to ensure consistency
+    win.setSize({ type: 'Logical', width: 1080, height: 760 } as any);
+    win.center();
+  }, [windowLabel, hasPermission]); // Run when permission changes too just to be safe
 
-  // --- 渲染 UI ---
+  // --- Render UI ---
   if (!hasPermission)
     return (
       <PermissionScreen
         onRetry={() => {
-          // Note: we don't necessarily need to reload, the logic will update hasPermission
-          // but if the user wants a fresh start:
           window.location.reload();
         }}
       />
@@ -105,84 +99,67 @@ function App() {
     )
   }
 
-  // 3. Main App
+  // 3. Main App (Dashboard Layout)
   return (
-    <main className="container">
-      <Header
-        view={currentView}
-        onToggleSettings={() => setCurrentView(v => v === "recorder" ? "settings" : "recorder")}
-        t={t}
-      />
+    <MainLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {activeTab === "home" && (
+        <DashboardHome history={history} shortcutKey={shortcutKey} />
+      )}
 
-      {currentView === "settings" ? (
-        <SettingsCard
-          devices={devices}
-          selectedDevice={selectedDevice}
-          setSelectedDevice={setSelectedDevice}
-
-          fetchDevices={fetchDevices}
-          selectedLanguage={selectedLanguage}
-          setSelectedLanguage={setSelectedLanguage}
-
-
-          uiLanguage={uiLanguage}
-          setUiLanguage={setUiLanguage}
-          isRecording={isRecording}
-          isStarting={isStarting}
-          isLoading={isLoading}
-          shortcutKey={shortcutKey}
-          isRecordingShortcut={isRecordingShortcut}
-          setIsRecordingShortcut={setIsRecordingShortcut}
-          withTimestamps={withTimestamps}
-          setWithTimestamps={setWithTimestamps}
-          customPrompt={customPrompt}
-          setCustomPrompt={setCustomPrompt}
-
-          recordingsDir={recordingsDir}
-          openRecordingsFolder={openRecordingsFolder}
-          t={t}
-        />
-      ) : (
-        <>
-          {/* 錄音控制區 (僅在模型存在時顯示) */}
-          {modelStatus.exists && (
-            <div className="home-controls">
-              <ControlCard
-                isRecording={isRecording}
-                isLoading={isLoading}
-                isStarting={isStarting}
-                handleToggleLogic={handleToggleLogic}
-                t={t}
-              />
-              <button
-                className="btn-secondary full-width"
-                onClick={handleImportFile}
-                disabled={isRecording || isStarting || isLoading}
-              >
-                {t.btnImport}
-              </button>
-            </div>
-          )}
-
-          {/* 歷史紀錄區 */}
+      {activeTab === "history" && (
+        <div className="page-container">
+          <div className="page-header">
+            <h1 className="page-title">History</h1>
+          </div>
           <HistorySection
             history={history}
             onDelete={deleteHistoryItem}
             t={t}
           />
-        </>
+        </div>
+      )}
+
+      {activeTab === "settings" && (
+        <div className="page-container">
+          <div className="page-header">
+            <h1 className="page-title">Settings</h1>
+          </div>
+          <SettingsCard
+            devices={devices}
+            selectedDevice={selectedDevice}
+            setSelectedDevice={setSelectedDevice}
+
+            fetchDevices={fetchDevices}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+
+            uiLanguage={uiLanguage}
+            setUiLanguage={setUiLanguage}
+            isRecording={isRecording}
+            isStarting={isStarting}
+            isLoading={isLoading}
+            shortcutKey={shortcutKey}
+            isRecordingShortcut={isRecordingShortcut}
+            setIsRecordingShortcut={setIsRecordingShortcut}
+            withTimestamps={withTimestamps}
+            setWithTimestamps={setWithTimestamps}
+
+            recordingsDir={recordingsDir}
+            openRecordingsFolder={openRecordingsFolder}
+            t={t}
+          />
+        </div>
       )}
 
       {error && <div className="error-toast">{error}</div>}
 
-      {/* 錄製快捷鍵時的遮罩 */}
+      {/* Overlays */}
       {isRecordingShortcut && (
         <ShortcutOverlay onClose={() => setIsRecordingShortcut(false)} t={t} />
       )}
 
-      {/* 拖拽檔案時的遮罩 */}
       {isDragging && <DragOverlay withTimestamps={withTimestamps} t={t} />}
-    </main>
+    </MainLayout>
   );
 }
 
