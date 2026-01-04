@@ -128,14 +128,24 @@
 }
 
 /* Step 1: Welcome */
-.welcome-step,
-.try-it-intro-step {
+.welcome-step {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     padding-top: 120px;
+    text-align: center;
+    position: relative;
+    width: 100%;
+}
+
+.try-it-intro-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     position: relative;
     width: 100%;
