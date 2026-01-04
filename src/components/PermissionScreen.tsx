@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import logoWhite from "../assets/logo_white.png";
 
 interface PermissionScreenProps {
   onRetry: () => void;
 }
 
-type Step = "welcome" | "permissions" | "test-mic" | "test-hotkey";
+type Step = "welcome" | "permissions" | "test-mic" | "test-hotkey" | "try-it" | "try-it-samples";
 
 export function PermissionScreen({
   onRetry,
@@ -24,6 +25,12 @@ export function PermissionScreen({
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [isFnPressed, setIsFnPressed] = useState(false);
+  const [modelDownloading, setModelDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [testTranscription, setTestTranscription] = useState("");
+  const [showDocHint, setShowDocHint] = useState(true);
+  const [isMockupFocused, setIsMockupFocused] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -155,18 +162,25 @@ export function PermissionScreen({
     </svg>
   );
 
+  const SlashCircleIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+    </svg>
+  );
+
   const MonitorIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
       <line x1="8" y1="21" x2="16" y2="21"></line>
       <line x1="12" y1="17" x2="12" y2="21"></line>
     </svg>
   );
 
-  const SlashCircleIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+  const GoogleDocsIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#4285F4">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2zm-1 5V3.5L18.5 8H15a1 1 0 0 1-1-1zM6 20V4h7v5h5v11H6z" />
+      <path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h5v2H8z" />
     </svg>
   );
 
@@ -293,10 +307,82 @@ export function PermissionScreen({
       case "welcome": return "20%";
       case "permissions": return "45%";
       case "test-mic": return "70%";
-      case "test-hotkey": return "90%";
+      case "test-hotkey": return "80%";
+      case "try-it": return "92%";
+      case "try-it-samples": return "100%";
       default: return "0%";
     }
   };
+
+  const handleStartExperience = async () => {
+    // 1. Register hotkey first
+    try {
+      await invoke("update_global_shortcut", { shortcutStr: selectedHotkey.join('+') });
+    } catch (e) {
+      console.error("Failed to register shortcut:", e);
+    }
+
+    // 2. Check model status
+    try {
+      const status = await invoke<{ exists: boolean }>("check_model_status", { modelType: "large-v3-turbo" });
+      if (status.exists) {
+        setStep("try-it-samples");
+      } else {
+        setModelDownloading(true);
+        await invoke("download_model", { modelType: "large-v3-turbo" });
+        setStep("try-it-samples");
+      }
+    } catch (e) {
+      console.error("Model error:", e);
+      setStep("try-it-samples");
+    } finally {
+      setModelDownloading(false);
+    }
+  };
+
+  useEffect(() => {
+    let unlisten: any;
+    const setup = async () => {
+      unlisten = await listen<any>("download-progress", (e) => {
+        setDownloadProgress(e.payload.progress);
+      });
+    };
+    setup();
+    return () => { if (unlisten) unlisten(); };
+  }, []);
+
+  useEffect(() => {
+    let unlistenReady: any;
+
+    const setupListeners = async () => {
+      unlistenReady = await listen("recording-ready", () => {
+        setIsTranscribing(true);
+        setTestTranscription("");
+        setShowDocHint(false);
+
+        // Simulate "typing" the result for the demo
+        const text = "My shopping list, bananas, oat milk, dark chocolate";
+        let i = 0;
+        const interval = setInterval(() => {
+          setTestTranscription(text.slice(0, i + 1));
+          i++;
+          if (i >= text.length) {
+            clearInterval(interval);
+            setIsTranscribing(false);
+            // After successful "dictation", enable navigation
+          }
+        }, 30);
+      });
+    };
+
+    if (step === "try-it-samples") {
+      setupListeners();
+    }
+
+    return () => {
+      if (unlistenReady) unlistenReady();
+    };
+  }, [step]);
 
   // --- Render ---
 
@@ -317,7 +403,7 @@ export function PermissionScreen({
           <div className="nav-arrow">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
-          <div className="nav-step">Try it</div>
+          <div className={step === "try-it" || step === "try-it-samples" ? "nav-step active" : "nav-step"}>Try it</div>
         </div>
       </header>
 
@@ -535,7 +621,7 @@ export function PermissionScreen({
                 <button className="btn-white-pill" onClick={() => setShowHotkeyModal(true)}>
                   No, change keyboard shortcut
                 </button>
-                <button className="btn-black continue-pill" onClick={onRetry}>
+                <button className="btn-black continue-pill" onClick={() => setStep("try-it")}>
                   Yes, continue
                 </button>
               </div>
@@ -544,6 +630,110 @@ export function PermissionScreen({
             <div className="split-right">
               <div className="visualizer-wrapper">
                 <KeyboardVisualizer />
+              </div>
+            </div>
+          </div>
+        )}
+        {step === "try-it" && (
+          <div className="try-it-intro-step">
+            <div className="back-link-top" onClick={() => setStep("test-hotkey")}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              <span>Back</span>
+            </div>
+            <div className="centered-content">
+              <h1 className="magic-title">Now, experience the magic</h1>
+              <p className="magic-subtitle">You will be asked to read some brief samples.</p>
+              <button
+                className="btn-black continue-pill large-pill"
+                onClick={handleStartExperience}
+                disabled={modelDownloading}
+              >
+                {modelDownloading ? `Downloading Model (${downloadProgress}%)` : "Continue"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "try-it-samples" && (
+          <div className="split-layout try-it-samples-step">
+            <div className="split-left">
+              <div className="back-link" onClick={() => setStep("try-it")}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back</span>
+              </div>
+              <div className="split-left-content">
+                <h2 className="step-title">Dictate the message into the textbox</h2>
+
+                <div className="instruction-card">
+                  <div className="instruction-header">
+                    <div className="mic-dot-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                      </svg>
+                    </div>
+                    <span>Hold the {selectedHotkey.map(k => (
+                      <span key={k} className="key-hint">
+                        {k === 'cmd' ? '⌘' : k === 'shift' ? '⇧' : k === 'option' ? '⌥' : k === 'control' ? '⌃' : k.toUpperCase()}
+                      </span>
+                    ))} key, read the message below, and release to insert spoken text.</span>
+                  </div>
+                  <div className="sample-text-box">
+                    <p className="sample-text">My shopping list, bananas, oat milk, dark chocolate</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="continue-footer-fixed">
+                <button className={`btn-black continue-pill ${testTranscription.length > 30 ? 'fade-in' : 'disabled'}`} onClick={onRetry}>
+                  Continue
+                </button>
+              </div>
+            </div>
+
+            <div className="split-right gray-bg">
+              <div className="docs-mockup-wrapper">
+                <div
+                  className={`docs-mockup ${isMockupFocused ? 'focused' : ''}`}
+                  onClick={() => setIsMockupFocused(true)}
+                >
+                  <div className="docs-header">
+                    <GoogleDocsIcon />
+                    <span>Google Docs</span>
+                  </div>
+                  <div className="docs-content">
+                    {showDocHint && (
+                      <div className="docs-placeholder">
+                        {isMockupFocused ? (
+                          <div className="transcribing-cursor-line">
+                            <div className="cursor-blink"></div>
+                            <span style={{ color: '#d2d2d7', marginLeft: '4px' }}>
+                              Hold down on the {selectedHotkey.map(k => (
+                                <span key={k}>[{k === 'cmd' ? '⌘' : k === 'shift' ? '⇧' : k === 'option' ? '⌥' : k === 'control' ? '⌃' : k.toUpperCase()}]</span>
+                              ))} key and start speaking...
+                            </span>
+                          </div>
+                        ) : (
+                          <span>Click to focus and start dictating...</span>
+                        )}
+                      </div>
+                    )}
+                    {isTranscribing && (
+                      <div className="transcribing-cursor-line">
+                        <span className="transcribing-text">{testTranscription}</span>
+                        <div className="cursor-blink"></div>
+                      </div>
+                    )}
+                    {!isTranscribing && testTranscription && (
+                      <div className="transcribing-cursor-line">
+                        <span className="transcribing-text">{testTranscription}</span>
+                        <div className="cursor-blink"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -12,7 +12,8 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
 }
 
-.back-link {
+.back-link,
+.back-link-top {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -24,8 +25,15 @@
     transition: color 0.2s;
 }
 
-.back-link:hover {
+.back-link:hover,
+.back-link-top:hover {
     color: #1d1d1f;
+}
+
+.back-link-top {
+    position: absolute;
+    top: 40px;
+    left: 80px;
 }
 
 .step-subtitle {
@@ -120,15 +128,210 @@
 }
 
 /* Step 1: Welcome */
-.welcome-step {
-    width: 100%;
+.welcome-step,
+.try-it-intro-step {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 80px;
+    justify-content: flex-start;
+    padding-top: 120px;
     text-align: center;
+    position: relative;
+    width: 100%;
+}
+
+.centered-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 600px;
+}
+
+.magic-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #1d1d1f;
+    letter-spacing: -0.4px;
+}
+
+.magic-subtitle {
+    font-size: 19px;
+    color: #86868b;
+    margin-bottom: 48px;
+    font-weight: 500;
+}
+
+.large-pill {
+    padding: 12px 48px;
+    font-size: 16px;
+}
+
+.welcome-step {
     animation: fadeIn 0.8s ease-out;
+}
+
+.try-it-samples-step .split-left {
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: relative;
+    background: white;
+}
+
+.try-it-samples-step .split-right {
+    background: #fbfbfd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+}
+
+.instruction-card {
+    background: #fbfbfd;
+    border: 1px solid #f2f2f2;
+    border-radius: 12px;
+    margin-top: 48px;
+    overflow: hidden;
+    max-width: 440px;
+}
+
+.instruction-header {
+    padding: 20px 24px;
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1d1d1f;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: flex-start;
+}
+
+.mic-dot-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.key-hint {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 2px;
+    color: #1d1d1f;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.sample-text-box {
+    padding: 24px;
+    background: #ffffff;
+    border-left: 2px solid #f2f2f2;
+    margin-left: 0;
+}
+
+.sample-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1d1d1f;
+    letter-spacing: -0.2px;
+    margin: 0;
+}
+
+.docs-mockup-wrapper {
+    width: 100%;
+    max-width: 500px;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.06));
+}
+
+.docs-mockup {
+    background: #ffffff;
+    border: 1px solid #e5e5e7;
+    border-radius: 12px;
+    overflow: hidden;
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+}
+
+.docs-mockup.focused {
+    border-color: #d2d2d7;
+    box-shadow: none;
+}
+
+.docs-header {
+    height: 48px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fbfbfd;
+    border-bottom: 1px solid #f2f2f2;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.docs-content {
+    flex: 1;
+    padding: 32px;
+    position: relative;
+    font-size: 17px;
+    color: #1d1d1f;
+    line-height: 1.6;
+}
+
+.docs-placeholder {
+    color: #d2d2d7;
+    font-style: italic;
+}
+
+.transcribing-cursor-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.cursor-blink {
+    width: 2px;
+    height: 19px;
+    background: #1d1d1f;
+    margin-top: 4px;
+    animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+
+    from,
+    to {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+.continue-footer-fixed {
+    position: absolute;
+    bottom: 40px;
+    right: 80px;
+    display: flex;
+    gap: 16px;
+}
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 .logo-large {
