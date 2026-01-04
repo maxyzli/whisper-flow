@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./App.css"; // Imports variables (we override them in main.css)
 import { useAppLogic } from "./hooks/useAppLogic";
 import { useHintWindowControl } from "./hooks/useHintWindowControl";
-import { PermissionScreen } from "./components/PermissionScreen";
+import { OnboardingScreen } from "./components/Onboarding/OnboardingScreen";
 import { SettingsCard } from "./components/SettingsCard";
 import { HistorySection } from "./components/HistorySection";
 import { DragOverlay } from "./components/DragOverlay";
@@ -76,7 +76,7 @@ function App() {
   // --- Render UI ---
   if (!hasPermission)
     return (
-      <PermissionScreen
+      <OnboardingScreen
         onRetry={() => {
           window.location.reload();
         }}
