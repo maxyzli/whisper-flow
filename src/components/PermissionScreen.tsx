@@ -5,7 +5,7 @@ interface PermissionScreenProps {
   onRetry: () => void;
 }
 
-type Step = "welcome" | "permissions" | "privacy";
+type Step = "welcome" | "permissions" | "test-mic";
 
 export function PermissionScreen({
   onRetry,
@@ -15,6 +15,10 @@ export function PermissionScreen({
   const [micGranted, setMicGranted] = useState(false);
   const [micLoading, setMicLoading] = useState(false);
   const [activeCard, setActiveCard] = useState<"acc" | "mic">("acc");
+
+  const [showMicModal, setShowMicModal] = useState(false);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("default");
 
   // --- Auto Detection ---
   useEffect(() => {
@@ -35,6 +39,17 @@ export function PermissionScreen({
   // --- Actions ---
   const handleAccessibilityPrompt = async () => {
     await invoke("prompt_accessibility_permission");
+  };
+
+  const handleOpenMicModal = async () => {
+    try {
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      const audioDevices = allDevices.filter(d => d.kind === 'audioinput');
+      setDevices(audioDevices);
+      setShowMicModal(true);
+    } catch (err) {
+      console.error("Failed to list devices:", err);
+    }
   };
 
   const handleRequestMic = async () => {
@@ -67,13 +82,6 @@ export function PermissionScreen({
     </svg>
   );
 
-  const LockIcon = () => (
-    <svg className="point-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-    </svg>
-  );
-
   const MonitorIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -89,18 +97,106 @@ export function PermissionScreen({
     </svg>
   );
 
+  const MicVisualizer = ({ deviceId }: { deviceId: string }) => {
+    const [level, setLevel] = useState(0);
+
+    useEffect(() => {
+      let audioContext: AudioContext;
+      let analyser: AnalyserNode;
+      let microphone: MediaStreamAudioSourceNode;
+      let rafId: number;
+      let stream: MediaStream;
+
+      async function setup() {
+        try {
+          const constraints = {
+            audio: deviceId === 'default' ? true : { deviceId: { exact: deviceId } }
+          };
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          analyser = audioContext.createAnalyser();
+          microphone = audioContext.createMediaStreamSource(stream);
+          microphone.connect(analyser);
+          analyser.fftSize = 64;
+          const bufferLength = analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+
+          const update = () => {
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+              sum += dataArray[i];
+            }
+            const avg = sum / bufferLength;
+            setLevel(avg / 150);
+            rafId = requestAnimationFrame(update);
+          };
+          update();
+        } catch (err) {
+          console.error("Mic test error:", err);
+        }
+      }
+
+      setup();
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (audioContext) audioContext.close();
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+    }, [deviceId]);
+
+    const barCount = 14;
+    return (
+      <div className="mic-test-visualizer">
+        <div className="visualizer-bars">
+          {[...Array(barCount)].map((_, i) => {
+            const h = Math.max(32, 32 + level * 25 * (0.4 + Math.random() * 0.4));
+            return (
+              <div
+                key={i}
+                className="visualizer-bar"
+                style={{
+                  height: `${h}px`,
+                  backgroundColor: level > 0.05 ? '#007aff' : '#f2f2f3'
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const getProgressWidth = () => {
+    switch (step) {
+      case "welcome": return "25%";
+      case "permissions": return "54%";
+      case "test-mic": return "83%";
+      default: return "0%";
+    }
+  };
+
   // --- Render ---
 
   return (
-    <div className="onboarding-container fade-in">
+    <div className="onboarding-container">
       <header className="onboarding-header">
+        <div className="header-progress-bar" style={{ width: getProgressWidth() }}></div>
         <div className="nav-steps">
-          <div className={step === 'welcome' ? 'nav-step active' : 'nav-step'}>Sign up</div>
-          <div className="nav-step">›</div>
-          <div className={step === 'permissions' ? 'nav-step active' : 'nav-step'}>Permissions</div>
-          <div className="nav-step">›</div>
-          <div className={step === 'privacy' ? 'nav-step active' : 'nav-step'}>Set up</div>
-          <div className="nav-step">›</div>
+          <div className={step === "welcome" ? "nav-step active" : "nav-step"}>Sign up</div>
+          <div className="nav-arrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+          <div className={step === "permissions" ? "nav-step active" : "nav-step"}>Permissions</div>
+          <div className="nav-arrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+          <div className={step === "test-mic" ? "nav-step active" : "nav-step"}>Set up</div>
+          <div className="nav-arrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d2d2d7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
           <div className="nav-step">Try it</div>
         </div>
       </header>
@@ -181,7 +277,7 @@ export function PermissionScreen({
 
               {accGranted && micGranted && (
                 <div className="continue-footer">
-                  <button className="btn-black continue-pill fade-in" onClick={onRetry}>
+                  <button className="btn-black continue-pill fade-in" onClick={() => setStep("test-mic")}>
                     Continue
                   </button>
                 </div>
@@ -262,54 +358,68 @@ export function PermissionScreen({
           </div>
         )}
 
-        {step === "privacy" && (
-          <div className="split-layout privacy-step">
+        {step === "test-mic" && (
+          <div className="split-layout test-mic-step">
             <div className="split-left">
-              <h2 className="step-title" style={{ maxWidth: '400px' }}>Thanks for trusting us, we value your privacy</h2>
-              <div className="permission-cards">
-                <div className="perm-card granted">
-                  <div className="perm-header">
-                    <h3>Allow Whisper Flow to paste text into any textbox</h3>
-                    <CheckIcon />
-                  </div>
-                </div>
-                <div className="perm-card granted">
-                  <div className="perm-header">
-                    <h3>Allow Whisper Flow to use your microphone</h3>
-                    <CheckIcon />
-                  </div>
+              <div className="back-link" onClick={() => setStep("permissions")}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Back</span>
+              </div>
+              <div className="split-left-content">
+                <h2 className="step-title">Speak to test your microphone</h2>
+                <p className="step-subtitle">Your computer&apos;s built-in mic will ensure optimal transcription.</p>
+                <div className="test-mic-prompt">
+                  <p>Do you see the blue bars moving while you speak?</p>
                 </div>
               </div>
-              <div style={{ marginTop: 'auto' }}>
-                <button className="btn-large" onClick={onRetry}>
-                  Complete Setup
+
+              <div className="mic-test-footer">
+                <button className="btn-white-pill" onClick={handleOpenMicModal}>
+                  No, change microphone
+                </button>
+                <button className="btn-black continue-pill" onClick={onRetry}>
+                  Yes, continue
                 </button>
               </div>
             </div>
 
             <div className="split-right">
-              <div className="privacy-points">
-                <div className="privacy-point">
-                  <ShieldIcon />
-                  <div className="point-content">
-                    <h4>Zero data retention</h4>
-                    <p>Your voice dictations are private with zero data retention.</p>
-                  </div>
+              <div className="visualizer-wrapper">
+                <MicVisualizer deviceId={selectedDeviceId} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showMicModal && (
+          <div className="mic-select-overlay" onClick={() => setShowMicModal(false)}>
+            <div className="mic-select-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Select a different microphone</h3>
+                <button className="close-btn" onClick={() => setShowMicModal(false)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="device-list">
+                <div
+                  className={selectedDeviceId === 'default' ? 'device-item active' : 'device-item'}
+                  onClick={() => { setSelectedDeviceId('default'); setShowMicModal(false); }}
+                >
+                  <span className="device-name">Auto-detect</span>
+                  <span className="device-desc">Uses system default microphone</span>
+                  {selectedDeviceId === 'default' && <div className="device-check">✓</div>}
                 </div>
-                <div className="privacy-point">
-                  <LockIcon />
-                  <div className="point-content">
-                    <h4>Never store or train on your data</h4>
-                    <p>None of your dictation data will be stored or used for model training by us or third parties.</p>
+                {devices.map(device => (
+                  <div
+                    key={device.deviceId}
+                    className={selectedDeviceId === device.deviceId ? 'device-item active' : 'device-item'}
+                    onClick={() => { setSelectedDeviceId(device.deviceId); setShowMicModal(false); }}
+                  >
+                    <span className="device-name">{device.label || `Microphone ${device.deviceId.slice(0, 4)}`}</span>
+                    {device.label.toLowerCase().includes('built-in') && <span className="device-desc" style={{ color: '#007aff' }}>Recommended</span>}
+                    {selectedDeviceId === device.deviceId && <div className="device-check">✓</div>}
                   </div>
-                </div>
-                <div className="privacy-point">
-                  <MonitorIcon />
-                  <div className="point-content">
-                    <h4>Everything stays local</h4>
-                    <p>Process happens directly on your device. Your voice never leaves your computer.</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>

@@ -12,28 +12,96 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
 }
 
+.back-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #86868b;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 24px;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.back-link:hover {
+    color: #1d1d1f;
+}
+
+.step-subtitle {
+    font-size: 17px;
+    color: #86868b;
+    margin-bottom: 96px;
+    line-height: 1.4;
+    max-width: 480px;
+}
+
+.test-mic-prompt {
+    font-size: 19px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 32px;
+}
+
+.mic-test-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 32px 0 10px 0;
+    margin-top: auto;
+}
+
+.btn-white-pill {
+    background: #ffffff;
+    color: #86868b;
+    border: 1px solid #f2f2f2;
+    padding: 10px 24px;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-white-pill:hover {
+    border-color: #d2d2d7;
+    color: #1d1d1f;
+    background: #fbfbfd;
+}
+
 .onboarding-header {
     height: 50px;
     display: flex;
     align-items: center;
-    padding: 0 40px;
+    justify-content: center;
+    padding: 0 60px;
     border-bottom: 1px solid #f2f2f2;
+    position: relative;
+    background: #ffffff;
+}
+
+.header-progress-bar {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    height: 1.5px;
+    background: #1d1d1f;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
 }
 
 .nav-steps {
     display: flex;
-    gap: 40px;
-    font-size: 15px;
-    color: #86868b;
-    margin-left: auto;
+    align-items: center;
+    gap: 24px;
 }
 
 .nav-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-size: 14px;
+    color: #86868b;
+    font-weight: 500;
     position: relative;
-    padding: 10px 4px;
+    padding: 14px 0;
     white-space: nowrap;
 }
 
@@ -42,16 +110,6 @@
     font-weight: 600;
 }
 
-.nav-step.active::after {
-    content: "";
-    display: block;
-    width: 100%;
-    height: 3px;
-    background: #1d1d1f;
-    position: absolute;
-    bottom: -10px;
-    border-radius: 2px;
-}
 
 .onboarding-content {
     flex: 1;
@@ -140,7 +198,7 @@
 .step-title {
     font-size: 24px;
     font-weight: 700;
-    margin-bottom: 32px;
+    margin-bottom: 8px;
     line-height: 1.25;
     letter-spacing: -0.2px;
     color: #1d1d1f;
@@ -247,15 +305,127 @@
     width: auto !important;
 }
 
-.privacy-card-wide {
+.mic-test-visualizer {
     background: #ffffff;
-    border-radius: 16px;
-    padding: 32px;
+    border-radius: 24px;
+    padding: 20px 32px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
     border: 1px solid #f2f2f2;
+    display: inline-flex;
+}
+
+.visualizer-bars {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 60px;
+}
+
+.visualizer-bar {
+    width: 9px;
+    border-radius: 6px;
+    background: #f2f2f3;
+    transition: all 0.1s ease;
+}
+
+.mic-select-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.mic-select-modal {
+    background: #ffffff;
     width: 100%;
-    max-width: 460px;
-    animation: slideUp 0.5s ease-out;
+    max-width: 440px;
+    border-radius: 16px;
+    padding: 16px 0;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-header {
+    padding: 8px 24px 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #86868b;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.1s;
+}
+
+.close-btn:hover {
+    color: #1d1d1f;
+}
+
+.device-list {
+    padding: 0 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.device-item {
+    padding: 16px 20px;
+    border: 1px solid #f2f2f2;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.device-item.active {
+    border-color: #f2f2f2;
+}
+
+.device-item:hover {
+    background: #fbfbfd;
+}
+
+.device-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.device-desc {
+    font-size: 12px;
+    color: #86868b;
+}
+
+.device-check {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #1d1d1f;
 }
 
 .btn-black:disabled {
@@ -361,6 +531,7 @@
 .accessibility-mockup .toggle.on {
     background: #34c759;
 }
+
 
 .accessibility-mockup .toggle::after {
     content: "";
