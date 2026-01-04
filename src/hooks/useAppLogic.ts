@@ -25,10 +25,10 @@ export function useAppLogic() {
     () => localStorage.getItem("wf_timestamps") === "true"
   );
   const [customPrompt, setCustomPrompt] = useState(
-    () => localStorage.getItem("wf_custom_prompt") || "技術術語：API, Rust, React, Python, SDE, Amazon, Google, Debug, Implementation, Frontend, Backend. 語言風：中英混雜、技術語言、繁體中文。"
+    () => localStorage.getItem("wf_custom_prompt") || "Technical terms: API, Rust, React, JavaScript, Python, SDE, Amazon, Google, Debug, Implementation, Frontend, Backend, Whisper, Tauri. Style: Professional, concise, tech-focused."
   );
   const [uiLanguage, setUiLanguage] = useState<UILanguage>(
-    () => (localStorage.getItem("wf_ui_language") as UILanguage) || "zh"
+    () => (localStorage.getItem("wf_ui_language") as UILanguage) || "en"
   );
 
   // UI 狀態

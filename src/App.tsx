@@ -62,13 +62,30 @@ function App() {
 
   const t = translations[uiLanguage];
 
+  // --- Onboarding Window Resize ---
+  useEffect(() => {
+    const win = getCurrentWindow();
+    if (windowLabel !== "main") return;
+
+    if (!hasPermission) {
+      // Scale up for onboarding (Fine-tuned rectangular look)
+      win.setSize({ type: 'Logical', width: 1080, height: 760 } as any);
+      win.center();
+    } else {
+      // Scale down for main recorder (Fine-tuned base size)
+      win.setSize({ type: 'Logical', width: 480, height: 820 } as any);
+    }
+  }, [hasPermission, windowLabel]);
+
   // --- 渲染 UI ---
   if (!hasPermission)
     return (
       <PermissionScreen
-        onOpenSettings={openSystemSettings}
-        onRetry={() => window.location.reload()}
-        shortcutKey={shortcutKey}
+        onRetry={() => {
+          // Note: we don't necessarily need to reload, the logic will update hasPermission
+          // but if the user wants a fresh start:
+          window.location.reload();
+        }}
       />
     );
 

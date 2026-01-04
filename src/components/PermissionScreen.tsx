@@ -1,37 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface PermissionScreenProps {
-  onOpenSettings: () => void;
   onRetry: () => void;
-  shortcutKey: string;
 }
 
-type Step = "welcome" | "accessibility" | "microphone";
+type Step = "welcome" | "permissions" | "privacy";
 
 export function PermissionScreen({
-  onOpenSettings,
   onRetry,
-  shortcutKey,
 }: PermissionScreenProps) {
   const [step, setStep] = useState<Step>("welcome");
-  const [showDetails, setShowDetails] = useState(false);
+  const [accGranted, setAccGranted] = useState(false);
+  const [micGranted, setMicGranted] = useState(false);
   const [micLoading, setMicLoading] = useState(false);
+  const [activeCard, setActiveCard] = useState<"acc" | "mic">("acc");
+
+  // --- Auto Detection ---
+  useEffect(() => {
+    let interval: number;
+    if (step === "permissions" && !accGranted) {
+      // Poll for accessibility permission
+      interval = window.setInterval(async () => {
+        const granted = await invoke<boolean>("check_accessibility_permission");
+        if (granted) {
+          setAccGranted(true);
+          setActiveCard("mic");
+        }
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [step, accGranted]);
 
   // --- Actions ---
-  const handleAccessibilityOpen = async () => {
-    // 嘗試觸發系統彈窗
+  const handleAccessibilityPrompt = async () => {
     await invoke("prompt_accessibility_permission");
-    // 同時打開設定面板，方便使用者操作
-    onOpenSettings();
   };
 
   const handleRequestMic = async () => {
     setMicLoading(true);
     try {
-      const granted = await invoke("request_microphone_permission");
+      const granted = await invoke<boolean>("request_microphone_permission");
       if (granted) {
-        onRetry();
+        setMicGranted(true);
       }
     } catch (error) {
       console.error("Failed to request mic permission:", error);
@@ -40,136 +51,269 @@ export function PermissionScreen({
     }
   };
 
-  // --- Render Steps ---
-  
-  // 0. Welcome
-  if (step === "welcome") {
-    return (
-      <div className="permission-container fade-in">
-        <div className="permission-content">
-          <div className="permission-icon float-anim">👋</div>
-          <h1 className="title-lg">歡迎使用 Whisper Flow</h1>
-          <p className="subtitle">
-            您的個人 AI 語音助理。
-            <br />
-            無需連網、隱私安全、隨處可用。
-          </p>
+  // --- Components ---
 
-          <div className="feature-grid">
-            <div className="feature-card">
-              <span className="feature-icon">🚀</span>
-              <h3>極速啟動</h3>
-              <p>按下快捷鍵，立即開始錄音</p>
-            </div>
-            <div className="feature-card">
-              <span className="feature-icon">🔒</span>
-              <h3>隱私優先</h3>
-              <p>本地運算，資料絕不外傳</p>
-            </div>
-          </div>
+  const CheckIcon = () => (
+    <div className="check-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+  );
 
-          <div className="permission-actions-col">
-            <button 
-              className="btn-primary large glow-effect" 
-              onClick={() => setStep("accessibility")}
-            >
-              開始設定 (約 30 秒)
-            </button>
-          </div>
+  const ShieldIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    </svg>
+  );
+
+  const LockIcon = () => (
+    <svg className="point-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  );
+
+  const MonitorIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+      <line x1="8" y1="21" x2="16" y2="21"></line>
+      <line x1="12" y1="17" x2="12" y2="21"></line>
+    </svg>
+  );
+
+  const SlashCircleIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+    </svg>
+  );
+
+  // --- Render ---
+
+  return (
+    <div className="onboarding-container fade-in">
+      <header className="onboarding-header">
+        <div className="nav-steps">
+          <div className={step === 'welcome' ? 'nav-step active' : 'nav-step'}>Sign up</div>
+          <div className="nav-step">›</div>
+          <div className={step === 'permissions' ? 'nav-step active' : 'nav-step'}>Permissions</div>
+          <div className="nav-step">›</div>
+          <div className={step === 'privacy' ? 'nav-step active' : 'nav-step'}>Set up</div>
+          <div className="nav-step">›</div>
+          <div className="nav-step">Try it</div>
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  // 1. Accessibility
-  if (step === "accessibility") {
-    return (
-      <div className="permission-container fade-in">
-        <div className="permission-content">
-          <div className="step-indicator">步驟 1 / 2</div>
-          <div className="permission-icon">⌨️</div>
-          <h1>啟用快捷鍵</h1>
-          <p className="permission-desc">
-            為了讓您能透過
-            <span className="hotkey-badge">
-              {shortcutKey.replace("Super", "Cmd").replace("Alt", "Opt")}
-            </span>
-            隨時喚醒錄音，<br/>macOS 需要您授權「輔助使用」權限。
-          </p>
-
-          <div className="permission-actions-col">
-            <button className="btn-primary large" onClick={handleAccessibilityOpen}>
-              前往系統設定授權
-            </button>
-            <button 
-              className="btn-text" 
-              onClick={() => setStep("microphone")}
-            >
-              我已完成設定，下一步
+      <div className="onboarding-content">
+        {step === "welcome" && (
+          <div className="welcome-step">
+            <div className="logo-large">
+              <svg className="logo-icon-svg" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+              </svg>
+            </div>
+            <h1>Welcome to Whisper Flow</h1>
+            <p>Smart dictation that understands you</p>
+            <button className="btn-large" onClick={() => setStep("permissions")}>
+              Get Started
             </button>
           </div>
+        )}
 
-          <div className="permission-details-wrapper">
-            <button
-              className="link-btn"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? "收起詳細說明 ▴" : "為什麼需要此權限？ ▾"}
-            </button>
+        {step === "permissions" && (
+          <div className="split-layout">
+            <div className="split-left">
+              <div className="split-left-content">
+                <h2 className="step-title">
+                  {accGranted && micGranted
+                    ? "Thanks for trusting us, we value your privacy"
+                    : "Set up Whisper Flow on your computer"}
+                </h2>
+                <div className="permission-cards">
+                  {/* Accessibility Card */}
+                  <div
+                    className={(accGranted && micGranted) ? "perm-card granted summary" : (activeCard === 'acc' ? 'perm-card active' : (accGranted ? 'perm-card granted' : 'perm-card'))}
+                    onClick={() => setActiveCard("acc")}
+                  >
+                    <div className="perm-header">
+                      <h3>Allow Whisper Flow to paste text into any textbox</h3>
+                      {accGranted && <CheckIcon />}
+                    </div>
+                    {activeCard === 'acc' && !accGranted && (
+                      <>
+                        <p className="perm-desc">This lets Whisper Flow put your spoken words in the right textbox.</p>
+                        <div className="perm-actions">
+                          <button className="btn-black" onClick={handleAccessibilityPrompt}>Allow</button>
+                          <div className="info-circle" title="Enables the global shortcut and auto-paste feature">i</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-            {showDetails && (
-              <div className="card permission-card slide-up">
-                <h4>🛡️ 隱私承諾</h4>
-                <ul>
-                  <li><strong>僅監聽特定按鍵：</strong>程式只會對您設定的快捷鍵做出反應。</li>
-                  <li><strong>標準機制：</strong>這與 Alfred、Raycast 等工具所需的權限相同。</li>
-                </ul>
-                <div className="permission-footer">
-                  路徑：系統設定 {'>'} 隱私權與安全性 {'>'} 輔助使用
+                  {/* Microphone Card */}
+                  <div
+                    className={(accGranted && micGranted) ? "perm-card granted summary" : (activeCard === 'mic' ? 'perm-card active' : (micGranted ? 'perm-card granted' : 'perm-card'))}
+                    onClick={() => setActiveCard("mic")}
+                  >
+                    <div className="perm-header">
+                      <h3>Allow Whisper Flow to use your microphone</h3>
+                      {micGranted && <CheckIcon />}
+                    </div>
+                    {activeCard === 'mic' && !micGranted && (
+                      <>
+                        <p className="perm-desc">Whisper Flow will only access the mic when you are actively using it.</p>
+                        <div className="perm-actions">
+                          <button
+                            className="btn-black"
+                            onClick={handleRequestMic}
+                            disabled={micLoading}
+                          >
+                            {micLoading ? "Detecting..." : "Allow"}
+                          </button>
+                          <div className="info-circle" title="Required to record your voice for transcription">i</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {accGranted && micGranted && (
+                <div className="continue-footer">
+                  <button className="btn-black continue-pill fade-in" onClick={onRetry}>
+                    Continue
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="split-right">
+              {accGranted && micGranted ? (
+                <div className="privacy-card-wide fade-in">
+                  <div className="privacy-points">
+                    <div className="privacy-point">
+                      <ShieldIcon />
+                      <div className="point-content">
+                        <h4>Zero data retention</h4>
+                        <p>Your voice dictations are private with zero data retention.</p>
+                      </div>
+                    </div>
+                    <div className="privacy-point">
+                      <SlashCircleIcon />
+                      <div className="point-content">
+                        <h4>Never store or train on your data</h4>
+                        <p>None of your dictation data will be stored or used for model training by us or third party.</p>
+                      </div>
+                    </div>
+                    <div className="privacy-point">
+                      <MonitorIcon />
+                      <div className="point-content">
+                        <h4>Everything stays local</h4>
+                        <p>All history stays local on your device.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                activeCard === "acc" ? (
+                  <div className="mockup-container accessibility-mockup">
+                    <div className="mockup-header">
+                      <div className="mockup-dot red"></div>
+                      <div className="mockup-dot yellow"></div>
+                      <div className="mockup-dot green"></div>
+                      <span style={{ fontSize: '12px', color: '#86868b', marginLeft: '8px' }}>Accessibility</span>
+                    </div>
+                    <div className="mac-dialog-embed">
+                      <p style={{ fontSize: '13px', color: '#86868b', marginBottom: '16px' }}>
+                        Allow the applications below to control your computer.
+                      </p>
+                      <div className="item">
+                        <div className="logo-small-mac">
+                          <svg className="logo-icon-svg" viewBox="0 0 24 24">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                          </svg>
+                        </div>
+                        <span style={{ fontSize: '14px', fontWeight: 500 }}>Whisper Flow</span>
+                        <div className={accGranted ? 'toggle on' : 'toggle'}></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mac-dialog">
+                    <div className="mac-dialog-icon">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                      </svg>
+                    </div>
+                    <h4>&quot;Whisper Flow&quot; would like to access the microphone.</h4>
+                    <p>Whisper Flow requires access to your microphone for voice transcription.</p>
+                    <div className="mac-dialog-buttons">
+                      <button className="mac-btn secondary">Don&apos;t Allow</button>
+                      <button className="mac-btn primary" onClick={handleRequestMic}>Allow</button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  // 2. Microphone
-  return (
-    <div className="permission-container fade-in">
-      <div className="permission-content">
-        <div className="step-indicator">步驟 2 / 2</div>
-        <div className="permission-icon">🎤</div>
-        <h1>啟用麥克風</h1>
-        <p className="permission-desc">
-          最後一步！<br/>
-          我們需要麥克風權限來聽取您的語音指令。
-        </p>
+        {step === "privacy" && (
+          <div className="split-layout privacy-step">
+            <div className="split-left">
+              <h2 className="step-title" style={{ maxWidth: '400px' }}>Thanks for trusting us, we value your privacy</h2>
+              <div className="permission-cards">
+                <div className="perm-card granted">
+                  <div className="perm-header">
+                    <h3>Allow Whisper Flow to paste text into any textbox</h3>
+                    <CheckIcon />
+                  </div>
+                </div>
+                <div className="perm-card granted">
+                  <div className="perm-header">
+                    <h3>Allow Whisper Flow to use your microphone</h3>
+                    <CheckIcon />
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: 'auto' }}>
+                <button className="btn-large" onClick={onRetry}>
+                  Complete Setup
+                </button>
+              </div>
+            </div>
 
-        <div className="permission-actions-col">
-          <button 
-            className="btn-primary large" 
-            onClick={handleRequestMic}
-            disabled={micLoading}
-          >
-            {micLoading ? "偵測中..." : "授權麥克風"}
-          </button>
-          
-          <button className="btn-text" onClick={onRetry}>
-            我已授權，開始使用
-          </button>
-        </div>
-
-        <div className="permission-details-wrapper">
-          <div className="card permission-card slide-up">
-            <h4>💡 沒看到彈窗？</h4>
-            <ul>
-              <li>請檢查 <strong>系統設定 {'>'} 隱私權與安全性 {'>'} 麥克風</strong></li>
-              <li>確保您的終端機或 Whisper Flow 已被勾選。</li>
-            </ul>
+            <div className="split-right">
+              <div className="privacy-points">
+                <div className="privacy-point">
+                  <ShieldIcon />
+                  <div className="point-content">
+                    <h4>Zero data retention</h4>
+                    <p>Your voice dictations are private with zero data retention.</p>
+                  </div>
+                </div>
+                <div className="privacy-point">
+                  <LockIcon />
+                  <div className="point-content">
+                    <h4>Never store or train on your data</h4>
+                    <p>None of your dictation data will be stored or used for model training by us or third parties.</p>
+                  </div>
+                </div>
+                <div className="privacy-point">
+                  <MonitorIcon />
+                  <div className="point-content">
+                    <h4>Everything stays local</h4>
+                    <p>Process happens directly on your device. Your voice never leaves your computer.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
