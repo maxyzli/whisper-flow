@@ -372,6 +372,8 @@ pub async fn stop_and_transcribe(
 
     // Optional: completion sounds
     if !transcript_text.is_empty() {
+        let _ = app.emit("transcription-result", &transcript_text);
+
         // Auto-Copy (Backend is more reliable than Frontend writeText)
         let _ = app.clipboard().write_text(transcript_text.clone());
 

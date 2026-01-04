@@ -319,6 +319,7 @@ export function PermissionScreen({
     // 1. Register hotkey first
     try {
       await invoke("update_global_shortcut", { shortcutStr: selectedHotkey.join('+') });
+      localStorage.setItem("wf_shortcut", selectedHotkey.join('+'));
     } catch (e) {
       console.error("Failed to register shortcut:", e);
     }
@@ -367,6 +368,9 @@ export function PermissionScreen({
 
     const setupListeners = async () => {
       unlistenReady = await listen("recording-ready", () => {
+        // If we are still on the intro page, move to samples page to see the typing
+        setStep("try-it-samples");
+
         setIsTranscribing(true);
         setTestTranscription("");
         setShowDocHint(false);
@@ -386,7 +390,7 @@ export function PermissionScreen({
       });
     };
 
-    if (step === "try-it-samples") {
+    if (step === "try-it" || step === "try-it-samples") {
       setupListeners();
     }
 
@@ -807,6 +811,14 @@ export function PermissionScreen({
                         )}
                       </div>
                     )}
+
+                    {isRecordingVisual && (
+                      <div className="transcribing-cursor-line" style={{ opacity: 0.7 }}>
+                        <span style={{ color: '#007AFF', fontWeight: 600 }}>[Recording...]</span>
+                        <div className="cursor-blink" style={{ backgroundColor: '#007AFF' }}></div>
+                      </div>
+                    )}
+
                     {isTranscribing && (
                       <div className="transcribing-cursor-line">
                         <span className="transcribing-text">{testTranscription}</span>
@@ -817,6 +829,15 @@ export function PermissionScreen({
                       <div className="transcribing-cursor-line">
                         <span className="transcribing-text">{testTranscription}</span>
                         <div className="cursor-blink"></div>
+                      </div>
+                    )}
+
+                    {demoFinished && (
+                      <div className="demo-success-footer fade-in" style={{ marginTop: '32px', textAlign: 'center' }}>
+                        <p style={{ color: '#34C759', fontWeight: 600, marginBottom: '16px' }}>✓ Successfully Transcribed!</p>
+                        <button className="btn-black continue-pill" onClick={() => window.location.reload()}>
+                          Complete Onboarding
+                        </button>
                       </div>
                     )}
                   </div>
@@ -838,7 +859,11 @@ export function PermissionScreen({
               <div className="device-list">
                 <div
                   className={selectedDeviceId === 'default' ? 'device-item active' : 'device-item'}
-                  onClick={() => { setSelectedDeviceId('default'); setShowMicModal(false); }}
+                  onClick={() => {
+                    setSelectedDeviceId('default');
+                    localStorage.setItem("wf_device", "0");
+                    setShowMicModal(false);
+                  }}
                 >
                   <span className="device-name">Auto-detect</span>
                   <span className="device-desc">Uses system default microphone</span>
@@ -848,7 +873,11 @@ export function PermissionScreen({
                   <div
                     key={device.deviceId}
                     className={selectedDeviceId === device.deviceId ? 'device-item active' : 'device-item'}
-                    onClick={() => { setSelectedDeviceId(device.deviceId); setShowMicModal(false); }}
+                    onClick={() => {
+                      setSelectedDeviceId(device.deviceId);
+                      localStorage.setItem("wf_device", device.deviceId);
+                      setShowMicModal(false);
+                    }}
                   >
                     <span className="device-name">{device.label || `Microphone ${device.deviceId.slice(0, 4)}`}</span>
                     {device.label.toLowerCase().includes('built-in') && <span className="device-desc" style={{ color: '#007aff' }}>Recommended</span>}
