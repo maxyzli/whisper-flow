@@ -73,11 +73,17 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel, uiLa
           if (showTimer) clearTimeout(showTimer);
 
           console.log("Hint Window: Hiding...");
-          // 狀態結束，隱藏視窗
+
+          // 強制發送同步訊號多次，確保狀態更新
           emit("sync-recording-status", false);
           emit("sync-loading-status", false);
+
           try { await hintWin.setIgnoreCursorEvents(false); } catch (e) { }
-          await hintWin.hide();
+
+          // 延遲一點點再隱藏，給予 UI 反應時間
+          setTimeout(async () => {
+            try { await hintWin.hide(); } catch (e) { }
+          }, 50);
         }
       } catch (err) {
         console.error("Hint Window Control Error:", err);
