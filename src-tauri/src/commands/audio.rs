@@ -377,7 +377,14 @@ pub async fn stop_and_transcribe(
 
         #[cfg(target_os = "macos")]
         {
-            // Auto-Paste: Simulate Cmd+V
+            // 1. Play Succcess Sound (Fire and forget)
+            thread::spawn(|| {
+                let _ = Command::new("afplay")
+                    .arg("/System/Library/Sounds/Blow.aiff")
+                    .output();
+            });
+
+            // 2. Auto-Paste: Simulate Cmd+V
             // Small delay to ensure clipboard is ready
             thread::spawn(|| {
                 thread::sleep(std::time::Duration::from_millis(50));

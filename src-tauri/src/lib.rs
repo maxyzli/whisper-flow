@@ -107,7 +107,9 @@ pub fn run() {
             commands::system::open_accessibility_settings,
             // History commands
             commands::history::get_history,
-            commands::history::delete_history_item
+            commands::history::delete_history_item,
+            // Window commands
+            commands::window::get_mouse_position
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { getAllWindows, LogicalSize, LogicalPosition, currentMonitor, primaryMonitor } from "@tauri-apps/api/window";
+import { getAllWindows, LogicalSize, LogicalPosition, currentMonitor, primaryMonitor, availableMonitors } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 
 interface UseHintWindowControlProps {
@@ -17,9 +18,6 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel, uiLa
 
     let showTimer: ReturnType<typeof setTimeout> | undefined;
 
-    emit("sync-recording-status", isRecording);
-    emit("sync-loading-status", isLoading);
-    emit("sync-language", uiLanguage);
 
     const updateHintWindow = async () => {
       try {
@@ -29,19 +27,46 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel, uiLa
         if (!hintWin) return;
 
         if (isRecording || isLoading) {
-          let monitor = await currentMonitor();
-          if (!monitor) {
-            monitor = await primaryMonitor();
+          // 1. Get Mouse Position
+          const mousePos = await invoke<{ x: number; y: number }>("get_mouse_position");
+          console.log("Mouse Pos:", mousePos);
+
+          // 2. Find target monitor
+          const monitors = await availableMonitors();
+          let targetMonitor = monitors.find(m => {
+            const { x, y } = m.position;
+            const { width, height } = m.size;
+            // Check if mouse is within this monitor's bounds
+            return (
+              mousePos.x >= x &&
+              mousePos.x < x + width &&
+              mousePos.y >= y &&
+              mousePos.y < y + height
+            );
+          });
+
+          // Fallback to current/primary if not found
+          if (!targetMonitor) {
+            targetMonitor = await currentMonitor() || await primaryMonitor() || monitors[0];
           }
 
-          if (monitor) {
-            const { width: screenWidth, height: screenHeight } = monitor.size;
-            const scaleFactor = monitor.scaleFactor;
+          if (targetMonitor) {
+            const { width: screenWidth, height: screenHeight } = targetMonitor.size;
+            const { x: monitorX, y: monitorY } = targetMonitor.position;
+            const scaleFactor = targetMonitor.scaleFactor; // Logical to Physical ratio
 
             const winWidth = 100;
             const winHeight = 42;
-            const x = (screenWidth / scaleFactor - winWidth) / 2;
-            const y = screenHeight / scaleFactor - winHeight - 5;
+
+            // Calculate centered X relative to the monitor
+            // We rely on LogicalPosition but we need to convert monitor bounds to logical.
+            const logicalWidth = screenWidth / scaleFactor;
+            const logicalHeight = screenHeight / scaleFactor;
+            const logicalMonitorX = monitorX / scaleFactor;
+            const logicalMonitorY = monitorY / scaleFactor;
+
+            const x = logicalMonitorX + (logicalWidth - winWidth) / 2;
+            const y = logicalMonitorY + logicalHeight - winHeight - 5;
 
             // 逐一嘗試設定，失敗也不要卡死
             try { await hintWin.setDecorations(false); } catch (e) { }
@@ -69,20 +94,21 @@ export function useHintWindowControl({ isRecording, isLoading, windowLabel, uiLa
             console.error("Hint Window: No monitor found.");
           }
         } else {
-          // 清除 timer，防止在隱藏過程中突然顯示
+          // Clear timer to prevent showing during hide animation
           if (showTimer) clearTimeout(showTimer);
 
           console.log("Hint Window: Hiding...");
-
-          // 強制發送同步訊號多次，確保狀態更新
-          emit("sync-recording-status", false);
-          emit("sync-loading-status", false);
 
           try { await hintWin.setIgnoreCursorEvents(false); } catch (e) { }
 
           // 延遲一點點再隱藏，給予 UI 反應時間
           setTimeout(async () => {
             try { await hintWin.hide(); } catch (e) { }
+
+            // 強制發送同步訊號多次，確保狀態更新
+            // Move inside setTimeout to prevent UI glitch before hiding
+            emit("sync-recording-status", false);
+            emit("sync-loading-status", false);
           }, 50);
         }
       } catch (err) {
